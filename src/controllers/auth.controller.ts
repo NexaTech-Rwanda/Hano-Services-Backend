@@ -1,0 +1,213 @@
+import { Request, Response } from 'express';
+import { AuthService } from '../services/auth.service';
+import { body } from 'express-validator';
+import { validate } from '../middleware/validation';
+import { UserRole } from '../types';
+
+export class AuthController {
+  /**
+   * Register a new user
+   * POST /api/auth/register
+   */
+  static register = [
+    validate([
+      body('phone')
+        .isMobilePhone('any')
+        .withMessage('Valid phone number is required'),
+      body('role')
+        .isIn(['customer', 'provider', 'admin'])
+        .withMessage('Valid role is required'),
+      body('email').optional().isEmail().withMessage('Valid email is required'),
+      body('password')
+        .optional()
+        .isLength({ min: 6 })
+        .withMessage('Password must be at least 6 characters'),
+    ]),
+    async (req: Request, res: Response) => {
+      try {
+        const { phone, role, email, password } = req.body;
+
+        const result = await AuthService.register(
+          phone,
+          role as UserRole,
+          email,
+          password
+        );
+
+        return res.status(201).json({
+          status: 'success',
+          data: result,
+        });
+      } catch (error: any) {
+        return res.status(400).json({
+          status: 'error',
+          message: error.message,
+        });
+      }
+    },
+  ];
+
+  /**
+   * Send OTP
+   * POST /api/auth/send-otp
+   */
+  static sendOTP = [
+    validate([
+      body('phone')
+        .isMobilePhone('any')
+        .withMessage('Valid phone number is required'),
+    ]),
+    async (req: Request, res: Response) => {
+      try {
+        const { phone } = req.body;
+
+        await AuthService.sendOTP(phone);
+
+        return res.json({
+          status: 'success',
+          message: 'OTP sent successfully',
+        });
+      } catch (error: any) {
+        return res.status(400).json({
+          status: 'error',
+          message: error.message,
+        });
+      }
+    },
+  ];
+
+  /**
+   * Verify OTP
+   * POST /api/auth/verify-otp
+   */
+  static verifyOTP = [
+    validate([
+      body('phone')
+        .isMobilePhone('any')
+        .withMessage('Valid phone number is required'),
+      body('code')
+        .isLength({ min: 6, max: 6 })
+        .isNumeric()
+        .withMessage('Valid 6-digit OTP code is required'),
+    ]),
+    async (req: Request, res: Response) => {
+      try {
+        const { phone, code } = req.body;
+
+        const isValid = await AuthService.verifyOTP(phone, code);
+
+        if (!isValid) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Invalid or expired OTP',
+          });
+        }
+
+        return res.json({
+          status: 'success',
+          message: 'Phone number verified successfully',
+        });
+      } catch (error: any) {
+        return res.status(400).json({
+          status: 'error',
+          message: error.message,
+        });
+      }
+    },
+  ];
+
+  /**
+   * Login with password
+   * POST /api/auth/login
+   */
+  static login = [
+    validate([
+      body('phone')
+        .isMobilePhone('any')
+        .withMessage('Valid phone number is required'),
+      body('password').notEmpty().withMessage('Password is required'),
+    ]),
+    async (req: Request, res: Response) => {
+      try {
+        const { phone, password } = req.body;
+
+        const result = await AuthService.login(phone, password);
+
+        return res.json({
+          status: 'success',
+          data: result,
+        });
+      } catch (error: any) {
+        return res.status(401).json({
+          status: 'error',
+          message: error.message,
+        });
+      }
+    },
+  ];
+
+  /**
+   * Login with OTP
+   * POST /api/auth/login-otp
+   */
+  static loginWithOTP = [
+    validate([
+      body('phone')
+        .isMobilePhone('any')
+        .withMessage('Valid phone number is required'),
+      body('code')
+        .isLength({ min: 6, max: 6 })
+        .isNumeric()
+        .withMessage('Valid 6-digit OTP code is required'),
+    ]),
+    async (req: Request, res: Response) => {
+      try {
+        const { phone, code } = req.body;
+
+        const result = await AuthService.loginWithOTP(phone, code);
+
+        return res.json({
+          status: 'success',
+          data: result,
+        });
+      } catch (error: any) {
+        return res.status(401).json({
+          status: 'error',
+          message: error.message,
+        });
+      }
+    },
+  ];
+
+  /**
+   * Reset password
+   * POST /api/auth/reset-password
+   */
+  static resetPassword = [
+    validate([
+      body('phone')
+        .isMobilePhone('any')
+        .withMessage('Valid phone number is required'),
+      body('newPassword')
+        .isLength({ min: 6 })
+        .withMessage('Password must be at least 6 characters'),
+    ]),
+    async (req: Request, res: Response) => {
+      try {
+        const { phone, newPassword } = req.body;
+
+        await AuthService.resetPassword(phone, newPassword);
+
+        return res.json({
+          status: 'success',
+          message: 'Password reset successfully',
+        });
+      } catch (error: any) {
+        return res.status(400).json({
+          status: 'error',
+          message: error.message,
+        });
+      }
+    },
+  ];
+}

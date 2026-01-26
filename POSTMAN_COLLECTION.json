@@ -1,0 +1,673 @@
+{
+	"info": {
+		"_postman_id": "hanoservices-api-collection",
+		"name": "HanoServices API",
+		"description": "API collection for HanoServices backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+250788123456\",\n  \"role\": \"provider\",\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "Send OTP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+250788123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/send-otp",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "send-otp"]
+						}
+					}
+				},
+				{
+					"name": "Verify OTP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+250788123456\",\n  \"code\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/verify-otp",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "verify-otp"]
+						}
+					}
+				},
+				{
+					"name": "Login with Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+250788123456\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Login with OTP",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+250788123456\",\n  \"code\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login-otp",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login-otp"]
+						}
+					}
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"phone\": \"+250788123456\",\n  \"newPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/reset-password",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "reset-password"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Service Categories",
+			"item": [
+				{
+					"name": "Get All Categories",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/categories",
+							"host": ["{{base_url}}"],
+							"path": ["api", "categories"]
+						}
+					}
+				},
+				{
+					"name": "Get Category by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/categories/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "categories", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "category-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Category (Admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"New Category\",\n  \"description\": \"Category description\",\n  \"icon\": \"icon-url\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/categories",
+							"host": ["{{base_url}}"],
+							"path": ["api", "categories"]
+						}
+					}
+				},
+				{
+					"name": "Update Category (Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Category Name\",\n  \"description\": \"Updated description\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/categories/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "categories", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "category-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Category (Admin)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/categories/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "categories", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "category-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Providers",
+			"item": [
+				{
+					"name": "Create Provider Profile",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{provider_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Doe\",\n  \"serviceCategoryId\": \"category-uuid-here\",\n  \"photo\": \"https://example.com/photo.jpg\",\n  \"priceRangeMin\": 5000,\n  \"priceRangeMax\": 15000,\n  \"yearsOfExperience\": 5,\n  \"latitude\": -1.9441,\n  \"longitude\": 30.0619,\n  \"address\": \"Kigali, Rwanda\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/providers",
+							"host": ["{{base_url}}"],
+							"path": ["api", "providers"]
+						}
+					}
+				},
+				{
+					"name": "Get Provider by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/providers/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "providers", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "provider-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get My Provider Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{provider_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/providers/me/profile",
+							"host": ["{{base_url}}"],
+							"path": ["api", "providers", "me", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Update Provider Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{provider_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Name\",\n  \"photo\": \"https://example.com/new-photo.jpg\",\n  \"priceRangeMin\": 6000,\n  \"priceRangeMax\": 20000,\n  \"yearsOfExperience\": 7\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/providers/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "providers", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "provider-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Availability",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{provider_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"availability\": \"available\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/providers/:id/availability",
+							"host": ["{{base_url}}"],
+							"path": ["api", "providers", ":id", "availability"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "provider-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Search Providers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/providers/search?serviceCategoryId=category-uuid&latitude=-1.9441&longitude=30.0619&maxDistance=10&minRating=4&isVerified=true&limit=20",
+							"host": ["{{base_url}}"],
+							"path": ["api", "providers", "search"],
+							"query": [
+								{
+									"key": "serviceCategoryId",
+									"value": "category-uuid",
+									"description": "Filter by service category"
+								},
+								{
+									"key": "latitude",
+									"value": "-1.9441",
+									"description": "User's latitude"
+								},
+								{
+									"key": "longitude",
+									"value": "30.0619",
+									"description": "User's longitude"
+								},
+								{
+									"key": "maxDistance",
+									"value": "10",
+									"description": "Max distance in km"
+								},
+								{
+									"key": "minRating",
+									"value": "4",
+									"description": "Minimum rating (0-5)"
+								},
+								{
+									"key": "isVerified",
+									"value": "true",
+									"description": "Filter verified providers"
+								},
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Results limit"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Add Portfolio Image",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{provider_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"imageUrl\": \"https://example.com/work-photo.jpg\",\n  \"description\": \"Completed plumbing work\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/providers/:id/portfolio",
+							"host": ["{{base_url}}"],
+							"path": ["api", "providers", ":id", "portfolio"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "provider-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Portfolio Images",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/providers/:id/portfolio",
+							"host": ["{{base_url}}"],
+							"path": ["api", "providers", ":id", "portfolio"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "provider-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Portfolio Image",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{provider_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/providers/:id/portfolio/:portfolioId",
+							"host": ["{{base_url}}"],
+							"path": ["api", "providers", ":id", "portfolio", ":portfolioId"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "provider-uuid-here"
+								},
+								{
+									"key": "portfolioId",
+									"value": "portfolio-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Submit Verification Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{provider_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"idDocument\": \"https://example.com/id-document.jpg\",\n  \"certificates\": [\n    \"https://example.com/cert1.jpg\",\n    \"https://example.com/cert2.jpg\"\n  ],\n  \"references\": [\n    \"Reference 1 details\",\n    \"Reference 2 details\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/providers/:id/verification",
+							"host": ["{{base_url}}"],
+							"path": ["api", "providers", ":id", "verification"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "provider-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Verification Request",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{provider_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/providers/:id/verification",
+							"host": ["{{base_url}}"],
+							"path": ["api", "providers", ":id", "verification"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "provider-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Get Verification Requests",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/verification-requests?status=pending",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "verification-requests"],
+							"query": [
+								{
+									"key": "status",
+									"value": "pending",
+									"description": "Filter by status: pending, approved, rejected"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Verification Request by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/admin/verification-requests/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "verification-requests", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "verification-request-uuid-here"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Review Verification Request",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{admin_token}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"approved\",\n  \"adminNotes\": \"Documents verified successfully\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/verification-requests/:id",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "verification-requests", ":id"],
+							"variable": [
+								{
+									"key": "id",
+									"value": "verification-request-uuid-here"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/health",
+					"host": ["{{base_url}}"],
+					"path": ["health"]
+				}
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "provider_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "admin_token",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
