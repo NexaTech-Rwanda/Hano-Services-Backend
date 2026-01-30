@@ -1,38 +1,51 @@
-import twilio from 'twilio';
 import { config } from '../config/config';
-
-const twilioClient =
-  config.twilio.accountSid && config.twilio.authToken
-    ? twilio(config.twilio.accountSid, config.twilio.authToken)
-    : null;
 
 export class WhatsappService {
   /**
-   * Send a WhatsApp message using Twilio's WhatsApp API.
+   * Generate a WhatsApp deep link that opens the user's WhatsApp app
+   * with a pre-filled message to the specified phone number.
    *
-   * Note: `to` must be in the form `whatsapp:+2507xxxxxxx`
-   * and `TWILIO_WHATSAPP_FROM` must be a WhatsApp-enabled number
-   * (also in `whatsapp:+...` format).
+   * @param phoneNumber - Phone number in international format (e.g., +250788123456 or 250788123456)
+   * @param message - Optional message to pre-fill (defaults to "Hello" if not provided)
+   * @returns WhatsApp deep link URL
    */
-  static async sendMessage(to: string, message: string): Promise<void> {
-    if (!twilioClient) {
-      console.warn(
-        '[WhatsappService] Twilio is not configured. WhatsApp message not sent. Set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN.'
-      );
-      return;
-    }
-    if (!config.twilio.whatsappFrom) {
-      console.warn(
-        '[WhatsappService] TWILIO_WHATSAPP_FROM is not set. WhatsApp message not sent.'
-      );
-      return;
+  static generateDeepLink(
+    phoneNumber: string,
+    message?: string
+  ): string {
+    // Remove any non-digit characters except the leading +
+    const cleanedPhone = phoneNumber.replace(/[^\d+]/g, '');
+    
+    // Remove the + if present (wa.me format doesn't need it)
+    const phoneWithoutPlus = cleanedPhone.startsWith('+')
+      ? cleanedPhone.substring(1)
+      : cleanedPhone;
+
+    if (!phoneWithoutPlus || phoneWithoutPlus.length < 8) {
+      throw new Error('Invalid phone number format');
     }
 
-    await twilioClient.messages.create({
-      to,
-      from: config.twilio.whatsappFrom,
-      body: message,
-    });
+    // Use default message if not provided
+    const defaultMessage = config.whatsapp?.defaultMessage || 'Hello';
+    const messageToSend = message || defaultMessage;
+
+    // URL encode the message
+    const encodedMessage = encodeURIComponent(messageToSend);
+
+    // Generate WhatsApp deep link
+    // Format: https://wa.me/{phone}?text={message}
+    return `https://wa.me/${phoneWithoutPlus}?text=${encodedMessage}`;
+  }
+
+  /**
+   * Generate a WhatsApp deep link (alias for generateDeepLink for backward compatibility)
+   *
+   * @param phoneNumber - Phone number in international format
+   * @param message - Optional message to pre-fill
+   * @returns WhatsApp deep link URL
+   */
+  static sendMessage(phoneNumber: string, message?: string): string {
+    return this.generateDeepLink(phoneNumber, message);
   }
 }
 

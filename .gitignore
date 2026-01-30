@@ -38,7 +38,7 @@ coverage/
 tmp/
 temp/
 
-POSTMAN_REQUESTS.md
-SETUP.md
-API_DOCUMENTATION.md
-POSTMAN_COLLECTION.json
+# Documentation
+/POSTMAN_REQUESTS.md
+/SETUP.md
+/API_DOCUMENTATION.md

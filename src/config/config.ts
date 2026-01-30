@@ -33,6 +33,13 @@ export const config = {
     apiUrl: process.env.SMS_API_URL || '',
   },
 
+  // Pindo Configuration
+  pindo: {
+    smsFrom: process.env.PINDO_SMS_FROM || '',
+    whatsappFrom: process.env.PINDO_WHATSAPP_FROM || '',
+  },
+
+  // Twilio (deprecated - kept for backward compatibility if needed)
   twilio: {
     accountSid: process.env.TWILIO_ACCOUNT_SID || '',
     authToken: process.env.TWILIO_AUTH_TOKEN || '',
@@ -42,11 +49,22 @@ export const config = {
 
   payments: {
     momo: {
-      apiKey: process.env.MOMO_API_KEY || '',
-      apiUrl: process.env.MOMO_API_URL || '',
+      apiKey: process.env.MTN_MOMO_API_KEY || '',
+      apiSecret: process.env.MTN_MOMO_API_SECRET || '',
+      apiUrl: process.env.MTN_MOMO_API_URL || 'https://sandbox.momodeveloper.mtn.com',
+      subscriptionKey: process.env.MTN_MOMO_SUBSCRIPTION_KEY || '',
+      environment: process.env.MTN_MOMO_ENVIRONMENT || 'sandbox', // sandbox or production
+      callbackUrl: process.env.MTN_MOMO_CALLBACK_URL || '',
     },
     airtel: {
       apiKey: process.env.AIRTEL_MONEY_API_KEY || '',
+      apiSecret: process.env.AIRTEL_MONEY_API_SECRET || '',
+      apiUrl: process.env.AIRTEL_MONEY_API_URL || '',
+      clientId: process.env.AIRTEL_MONEY_CLIENT_ID || '',
+      clientSecret: process.env.AIRTEL_MONEY_CLIENT_SECRET || '',
+      merchantId: process.env.AIRTEL_MONEY_MERCHANT_ID || '',
+      environment: process.env.AIRTEL_MONEY_ENVIRONMENT || 'sandbox', // sandbox or production
+      callbackUrl: process.env.AIRTEL_MONEY_CALLBACK_URL || '',
     },
     card: {
       apiKey: process.env.CARD_API_KEY || '',
@@ -57,6 +75,7 @@ export const config = {
   whatsapp: {
     apiKey: process.env.WHATSAPP_API_KEY || '',
     apiUrl: process.env.WHATSAPP_API_URL || '',
+    defaultMessage: process.env.WHATSAPP_DEFAULT_MESSAGE || 'Hello',
   },
 
   maps: {
