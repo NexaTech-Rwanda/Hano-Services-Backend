@@ -7,6 +7,7 @@ export class UserModel {
    * Create a new user
    */
   static async create(
+    username: string,
     phone: string,
     role: UserRole,
     email?: string,
@@ -15,11 +16,26 @@ export class UserModel {
     const hashedPassword = password ? await hashPassword(password) : null;
 
     const result = await pool.query(
-      `INSERT INTO users (phone, email, password, role, is_phone_verified)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO users (username, phone, email, password, role, is_phone_verified)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [phone, email || null, hashedPassword, role, false]
+      [username, phone, email || null, hashedPassword, role, false]
     );
+
+    return this.mapRowToUser(result.rows[0]);
+  }
+
+  /**
+   * Find user by username
+   */
+  static async findByUsername(username: string): Promise<User | null> {
+    const result = await pool.query('SELECT * FROM users WHERE username = $1', [
+      username,
+    ]);
+
+    if (result.rows.length === 0) {
+      return null;
+    }
 
     return this.mapRowToUser(result.rows[0]);
   }
@@ -88,6 +104,7 @@ export class UserModel {
   private static mapRowToUser(row: any): User {
     return {
       id: row.id,
+      username: row.username,
       phone: row.phone,
       email: row.email,
       password: row.password,

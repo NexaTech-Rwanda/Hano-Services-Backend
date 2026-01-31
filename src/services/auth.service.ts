@@ -9,6 +9,7 @@ export interface AuthTokens {
   accessToken: string;
   user: {
     id: string;
+    username: string;
     phone: string;
     email?: string;
     role: UserRole;
@@ -35,19 +36,26 @@ export class AuthService {
    * Register a new user
    */
   static async register(
+    username: string,
     phone: string,
     role: UserRole,
     email?: string,
     password?: string
   ): Promise<AuthTokens> {
-    // Check if user already exists
-    const existingUser = await UserModel.findByPhone(phone);
-    if (existingUser) {
+    // Check if username already exists
+    const existingUserByUsername = await UserModel.findByUsername(username);
+    if (existingUserByUsername) {
+      throw new Error('Username already taken');
+    }
+
+    // Check if phone number already exists
+    const existingUserByPhone = await UserModel.findByPhone(phone);
+    if (existingUserByPhone) {
       throw new Error('User with this phone number already exists');
     }
 
     // Create user
-    const user = await UserModel.create(phone, role, email, password);
+    const user = await UserModel.create(username, phone, role, email, password);
 
     // Generate token
     const accessToken = this.generateToken(user.id, user.role);
@@ -56,6 +64,7 @@ export class AuthService {
       accessToken,
       user: {
         id: user.id,
+        username: user.username,
         phone: user.phone,
         email: user.email,
         role: user.role,
@@ -139,6 +148,7 @@ export class AuthService {
       accessToken,
       user: {
         id: user.id,
+        username: user.username,
         phone: user.phone,
         email: user.email,
         role: user.role,
@@ -172,6 +182,7 @@ export class AuthService {
       accessToken,
       user: {
         id: user.id,
+        username: user.username,
         phone: user.phone,
         email: user.email,
         role: user.role,

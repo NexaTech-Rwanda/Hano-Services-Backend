@@ -11,6 +11,12 @@ export class AuthController {
    */
   static register = [
     validate([
+      body('username')
+        .trim()
+        .isLength({ min: 3, max: 30 })
+        .withMessage('Username must be between 3 and 30 characters')
+        .matches(/^[a-zA-Z0-9_]+$/)
+        .withMessage('Username can only contain letters, numbers, and underscores'),
       body('phone')
         .isMobilePhone('any')
         .withMessage('Valid phone number is required'),
@@ -25,9 +31,10 @@ export class AuthController {
     ]),
     async (req: Request, res: Response) => {
       try {
-        const { phone, role, email, password } = req.body;
+        const { username, phone, role, email, password } = req.body;
 
         const result = await AuthService.register(
+          username,
           phone,
           role as UserRole,
           email,
