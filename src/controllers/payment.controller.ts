@@ -36,11 +36,19 @@ export class PaymentController {
       // Validate phone number for mobile money
       if (
         (channel === PaymentChannel.MTN_MOMO ||
-          channel === PaymentChannel.AIRTEL_MONEY) &&
+          channel === PaymentChannel.AIRTEL_MONEY ||
+          channel === PaymentChannel.MOBILE_MONEY) &&
         !phoneNumber
       ) {
         return res.status(400).json({
           error: 'phoneNumber is required for mobile money payments',
+        });
+      }
+
+      // Validate email for Flutterwave (required for all payment types)
+      if (!email) {
+        return res.status(400).json({
+          error: 'email is required for payments',
         });
       }
 
@@ -69,98 +77,122 @@ export class PaymentController {
   }
 
   /**
-   * MTN Mobile Money webhook/callback handler
-   * POST /api/payments/mtn/callback
+   * Flutterwave webhook/callback handler
+   * POST /api/payments/flutterwave/callback
+   * Flutterwave sends webhooks for all payment types (mobile money, card, etc.)
+   * Documentation: https://developer.flutterwave.com/docs/events
    */
-  static async mtnCallback(req: Request, res: Response): Promise<Response> {
+  static async flutterwaveCallback(req: Request, res: Response): Promise<Response> {
     try {
-      const callbackData = req.body;
+      // Get the signature from header for verification
+      const signature = req.headers['verif-hash'] as string;
+      const rawBody = JSON.stringify(req.body);
 
-      console.log('[PaymentController] MTN Callback received:', JSON.stringify(callbackData, null, 2));
+      // Verify webhook signature
+      const isValid = PaymentService.verifyWebhookSignature(rawBody, signature);
+      if (!isValid) {
+        console.warn('[PaymentController] Invalid Flutterwave webhook signature');
+        return res.status(401).json({
+          error: 'Invalid signature',
+        });
+      }
 
-      // MTN callback structure (adjust based on actual MTN API response)
+      const event = req.body;
+      console.log('[PaymentController] Flutterwave webhook received:', JSON.stringify(event, null, 2));
+
+      // Flutterwave v4 webhook structure
       const {
-        externalId,
-        financialTransactionId,
+        type: eventType, // e.g., 'charge.completed', 'charge.failed'
+        data,
+      } = event;
+
+      // Extract payment information from Flutterwave v4 webhook
+      const {
+        id: chargeId,
+        reference, // Transaction reference (our txRef)
         status,
         amount,
         currency,
-        payer,
-        reason,
-      } = callbackData;
+        customer,
+        meta,
+        payment_method,
+        processor_response,
+      } = data || {};
 
-      // TODO: Update your database with payment status
-      // Example:
-      // await PaymentModel.updateStatus(externalId, status, {
-      //   financialTransactionId,
-      //   amount,
-      //   currency,
-      //   payer,
-      //   reason,
-      // });
+      // Handle different event types
+      switch (eventType) {
+        case 'charge.completed':
+          // Payment was successful
+          // TODO: Update your database with payment status
+          // Example:
+          // await PaymentModel.updateStatus(reference, 'successful', {
+          //   chargeId,
+          //   amount,
+          //   currency,
+          //   customer,
+          //   meta,
+          //   payment_method,
+          //   processor_response,
+          //   completedAt: new Date(),
+          // });
+          console.log(`[PaymentController] Payment successful: ${reference}`);
+          break;
 
-      // Always respond with 200 OK quickly (within 5 seconds)
-      // MTN will retry if you don't respond or respond with error
+        case 'charge.failed':
+          // Payment failed
+          // TODO: Update your database with payment status
+          // await PaymentModel.updateStatus(reference, 'failed', {
+          //   chargeId,
+          //   amount,
+          //   currency,
+          //   customer,
+          //   meta,
+          //   processor_response,
+          //   failedAt: new Date(),
+          // });
+          console.log(`[PaymentController] Payment failed: ${reference}`);
+          break;
+
+        default:
+          console.log(`[PaymentController] Unhandled event type: ${eventType}`);
+      }
+
+      // Always respond with 200 OK quickly
+      // Flutterwave will retry if you don't respond or respond with error
       return res.status(200).json({
-        message: 'Callback received',
+        message: 'Webhook received',
         received: true,
       });
     } catch (error: any) {
-      console.error('[PaymentController] Error processing MTN callback:', error);
+      console.error('[PaymentController] Error processing Flutterwave webhook:', error);
       // Still return 200 to prevent retries
       return res.status(200).json({
-        message: 'Callback received but processing failed',
+        message: 'Webhook received but processing failed',
         error: error.message,
       });
     }
   }
 
   /**
-   * Airtel Money webhook/callback handler
-   * POST /api/payments/airtel/callback
+   * Legacy MTN callback (kept for backward compatibility)
+   * @deprecated Use flutterwaveCallback instead
+   */
+  static async mtnCallback(req: Request, res: Response): Promise<Response> {
+    console.warn('[PaymentController] MTN callback is deprecated. Use Flutterwave webhook instead.');
+    return res.status(200).json({
+      message: 'Deprecated endpoint. Use /api/payments/flutterwave/callback',
+    });
+  }
+
+  /**
+   * Legacy Airtel callback (kept for backward compatibility)
+   * @deprecated Use flutterwaveCallback instead
    */
   static async airtelCallback(req: Request, res: Response): Promise<Response> {
-    try {
-      const callbackData = req.body;
-
-      console.log('[PaymentController] Airtel Callback received:', JSON.stringify(callbackData, null, 2));
-
-      // Airtel callback structure (adjust based on actual Airtel API response)
-      const {
-        transactionId,
-        reference,
-        status,
-        amount,
-        currency,
-        msisdn,
-        message,
-        responseCode,
-      } = callbackData;
-
-      // TODO: Update your database with payment status
-      // Example:
-      // await PaymentModel.updateStatus(reference || transactionId, status, {
-      //   transactionId,
-      //   amount,
-      //   currency,
-      //   msisdn,
-      //   message,
-      //   responseCode,
-      // });
-
-      // Always respond with 200 OK quickly (within 5 seconds)
-      return res.status(200).json({
-        message: 'Callback received',
-        received: true,
-      });
-    } catch (error: any) {
-      console.error('[PaymentController] Error processing Airtel callback:', error);
-      // Still return 200 to prevent retries
-      return res.status(200).json({
-        message: 'Callback received but processing failed',
-        error: error.message,
-      });
-    }
+    console.warn('[PaymentController] Airtel callback is deprecated. Use Flutterwave webhook instead.');
+    return res.status(200).json({
+      message: 'Deprecated endpoint. Use /api/payments/flutterwave/callback',
+    });
   }
 
   /**

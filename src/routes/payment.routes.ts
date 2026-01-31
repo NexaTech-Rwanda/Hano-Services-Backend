@@ -33,7 +33,7 @@ const router = Router();
  *                 type: string
  *               channel:
  *                 type: string
- *                 enum: [mtn_momo, airtel_money, card]
+ *                 enum: [mtn_momo, airtel_money, mobile_money, card]
  *               phoneNumber:
  *                 type: string
  *                 example: "+250788123456"
@@ -56,20 +56,39 @@ router.post(
       .optional()
       .isString()
       .withMessage('Phone number must be a string'),
+    body('email')
+      .isEmail()
+      .withMessage('Valid email is required'),
   ],
   PaymentController.initiatePayment
 );
 
 /**
  * @swagger
+ * /api/payments/flutterwave/callback:
+ *   post:
+ *     summary: Flutterwave webhook callback
+ *     tags: [Payments]
+ *     description: This endpoint receives payment status updates from Flutterwave for all payment types
+ *     responses:
+ *       200:
+ *         description: Webhook received
+ *       401:
+ *         description: Invalid signature
+ */
+router.post('/flutterwave/callback', PaymentController.flutterwaveCallback);
+
+/**
+ * @swagger
  * /api/payments/mtn/callback:
  *   post:
- *     summary: MTN Mobile Money webhook callback
+ *     summary: MTN Mobile Money webhook callback (deprecated)
  *     tags: [Payments]
- *     description: This endpoint receives payment status updates from MTN
+ *     description: Deprecated - Use /api/payments/flutterwave/callback instead
  *     responses:
  *       200:
  *         description: Callback received
+ * @deprecated
  */
 router.post('/mtn/callback', PaymentController.mtnCallback);
 
@@ -77,12 +96,13 @@ router.post('/mtn/callback', PaymentController.mtnCallback);
  * @swagger
  * /api/payments/airtel/callback:
  *   post:
- *     summary: Airtel Money webhook callback
+ *     summary: Airtel Money webhook callback (deprecated)
  *     tags: [Payments]
- *     description: This endpoint receives payment status updates from Airtel
+ *     description: Deprecated - Use /api/payments/flutterwave/callback instead
  *     responses:
  *       200:
  *         description: Callback received
+ * @deprecated
  */
 router.post('/airtel/callback', PaymentController.airtelCallback);
 

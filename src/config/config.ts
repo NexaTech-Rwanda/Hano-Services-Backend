@@ -48,12 +48,27 @@ export const config = {
   },
 
   payments: {
+    flutterwave: {
+      // Flutterwave v4 API uses OAuth 2.0 with Client-Id and Client-Secret
+      clientId: process.env.FLUTTERWAVE_CLIENT_ID || '',
+      clientSecret: process.env.FLUTTERWAVE_CLIENT_SECRET || '',
+      // Legacy v3 API keys (if you have them, we'll use them as fallback)
+      publicKey: process.env.FLUTTERWAVE_PUBLIC_KEY || '',
+      secretKey: process.env.FLUTTERWAVE_SECRET_KEY || '',
+      secretHash: process.env.FLUTTERWAVE_SECRET_HASH || '', // For webhook verification
+      apiUrl: process.env.FLUTTERWAVE_API_URL || 'https://developersandbox-api.flutterwave.com', // v4 sandbox
+      authUrl: process.env.FLUTTERWAVE_AUTH_URL || 'https://idp.flutterwave.com/realms/flutterwave/protocol/openid-connect/token',
+      environment: process.env.FLUTTERWAVE_ENVIRONMENT || 'sandbox', // sandbox or production
+      callbackUrl: process.env.FLUTTERWAVE_CALLBACK_URL || '',
+      logoUrl: process.env.FLUTTERWAVE_LOGO_URL || '', // Optional: Your logo URL for payment page
+    },
+    // Legacy configs kept for backward compatibility (can be removed later)
     momo: {
       apiKey: process.env.MTN_MOMO_API_KEY || '',
       apiSecret: process.env.MTN_MOMO_API_SECRET || '',
       apiUrl: process.env.MTN_MOMO_API_URL || 'https://sandbox.momodeveloper.mtn.com',
       subscriptionKey: process.env.MTN_MOMO_SUBSCRIPTION_KEY || '',
-      environment: process.env.MTN_MOMO_ENVIRONMENT || 'sandbox', // sandbox or production
+      environment: process.env.MTN_MOMO_ENVIRONMENT || 'sandbox',
       callbackUrl: process.env.MTN_MOMO_CALLBACK_URL || '',
     },
     airtel: {
@@ -63,7 +78,7 @@ export const config = {
       clientId: process.env.AIRTEL_MONEY_CLIENT_ID || '',
       clientSecret: process.env.AIRTEL_MONEY_CLIENT_SECRET || '',
       merchantId: process.env.AIRTEL_MONEY_MERCHANT_ID || '',
-      environment: process.env.AIRTEL_MONEY_ENVIRONMENT || 'sandbox', // sandbox or production
+      environment: process.env.AIRTEL_MONEY_ENVIRONMENT || 'sandbox',
       callbackUrl: process.env.AIRTEL_MONEY_CALLBACK_URL || '',
     },
     card: {
