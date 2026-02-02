@@ -3,6 +3,23 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Validate database credentials in production
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.DB_PASSWORD || process.env.DB_PASSWORD === '') {
+    throw new Error(
+      'DB_PASSWORD must be set in production environment. ' +
+      'Database credentials cannot use default values in production.'
+    );
+  }
+  
+  if (!process.env.DB_HOST || process.env.DB_HOST === 'localhost') {
+    console.warn(
+      'Warning: DB_HOST is set to localhost in production. ' +
+      'This is not recommended for production environments.'
+    );
+  }
+}
+
 const dbConfig: PoolConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),

@@ -10,6 +10,9 @@
     "lint": "eslint src --ext .ts",
     "test": "jest",
     "db:migrate": "node dist/database/migrate.js",
+    "db:migrate:rollback": "node dist/database/migrate.js rollback",
+    "db:migrate:rollback-all": "node dist/database/migrate.js rollback-all",
+    "db:migrate:status": "node dist/database/migrate.js status",
     "db:seed": "node dist/database/seed.js"
   },
   "keywords": [

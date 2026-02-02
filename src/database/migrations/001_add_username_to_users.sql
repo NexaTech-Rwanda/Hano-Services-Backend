@@ -1,7 +1,9 @@
 -- Migration: Add username column to users table
--- Run this migration if your users table already exists without the username column
+-- Version: 001
+-- Created: 2024-01-01
+-- Description: Adds username column to users table if it doesn't exist
 
--- Add username column (if it doesn't exist)
+-- UP Migration: Add username column
 DO $$ 
 BEGIN
     IF NOT EXISTS (

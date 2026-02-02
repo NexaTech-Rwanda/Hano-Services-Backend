@@ -2,6 +2,39 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Validation function for required environment variables in production
+function requireEnv(key: string, defaultValue?: string): string {
+  const value = process.env[key] || defaultValue;
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  if (isProduction && (!value || value === '')) {
+    throw new Error(
+      `Missing required environment variable: ${key}. ` +
+      `This variable is required in production environment.`
+    );
+  }
+  
+  return value || '';
+}
+
+// Validate critical secrets in production
+if (process.env.NODE_ENV === 'production') {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret || jwtSecret === 'your-secret-key-change-in-production') {
+    throw new Error(
+      'JWT_SECRET must be set to a secure value in production. ' +
+      'Do not use the default value.'
+    );
+  }
+  
+  const dbPassword = process.env.DB_PASSWORD;
+  if (!dbPassword || dbPassword === '') {
+    throw new Error(
+      'DB_PASSWORD must be set in production environment.'
+    );
+  }
+}
+
 export const config = {
   // Server
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -13,12 +46,12 @@ export const config = {
     port: parseInt(process.env.DB_PORT || '5432'),
     name: process.env.DB_NAME || 'hanoservices',
     user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || '',
+    password: requireEnv('DB_PASSWORD', ''),
   },
 
   // JWT
   jwt: {
-    secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+    secret: process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'your-secret-key-change-in-production'),
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
 
