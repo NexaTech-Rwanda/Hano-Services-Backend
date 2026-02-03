@@ -132,6 +132,14 @@ export const config = {
     openStreetMapEnabled: process.env.OPENSTREETMAP_ENABLED === 'true',
   },
 
+  // Supabase (S3-compatible) storage
+  supabase: {
+    url: process.env.SUPABASE_URL || '',
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    bucket: process.env.SUPABASE_BUCKET || 'images',
+    publicUrlBase: process.env.SUPABASE_PUBLIC_URL_BASE || '', // optional CDN/public base URL
+  },
+
   cors: {
     origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
   },
