@@ -14,7 +14,15 @@ app.use(cors({
   origin: config.cors.origin,
   credentials: true,
 }));
-app.use(express.json());
+
+// Capture raw JSON body so we can verify Flutterwave webhook signatures
+app.use(express.json({
+  verify: (req: any, _res, buf) => {
+    // Save raw body as string for HMAC verification (e.g., Flutterwave webhooks)
+    (req as any).rawBody = buf.toString('utf8');
+  },
+}));
+
 app.use(express.urlencoded({ extended: true }));
 
 /**

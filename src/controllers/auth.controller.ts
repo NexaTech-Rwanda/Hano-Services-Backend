@@ -217,4 +217,61 @@ export class AuthController {
       }
     },
   ];
+
+  /**
+   * Refresh access token
+   * POST /api/auth/refresh-token
+   */
+  static async refreshToken(req: Request, res: Response): Promise<Response> {
+    try {
+      const { refreshToken } = req.body;
+      if (!refreshToken) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'refreshToken is required',
+        });
+      }
+
+      const result = await AuthService.refreshTokens(refreshToken);
+
+      return res.json({
+        status: 'success',
+        data: result,
+      });
+    } catch (error: any) {
+      return res.status(401).json({
+        status: 'error',
+        message: error.message || 'Invalid refresh token',
+      });
+    }
+  }
+
+  /**
+   * Logout (revoke all refresh tokens for current user)
+   * POST /api/auth/logout
+   */
+  static async logout(req: Request, res: Response): Promise<Response> {
+    try {
+      // `authenticate` middleware should attach userId to request
+      const userId = (req as any).user?.userId as string | undefined;
+      if (!userId) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Unauthorized',
+        });
+      }
+
+      await AuthService.logout(userId);
+
+      return res.json({
+        status: 'success',
+        message: 'Logged out successfully',
+      });
+    } catch (error: any) {
+      return res.status(500).json({
+        status: 'error',
+        message: error.message || 'Failed to logout',
+      });
+    }
+  }
 }

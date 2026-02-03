@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
+import { authRateLimiter } from '../middleware/rateLimit';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -50,7 +52,7 @@ const router = Router();
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  */
-router.post('/register', AuthController.register);
+router.post('/register', authRateLimiter, AuthController.register);
 
 /**
  * @swagger
@@ -87,7 +89,7 @@ router.post('/register', AuthController.register);
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  */
-router.post('/send-otp', AuthController.sendOTP);
+router.post('/send-otp', authRateLimiter, AuthController.sendOTP);
 
 /**
  * @swagger
@@ -129,7 +131,7 @@ router.post('/send-otp', AuthController.sendOTP);
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  */
-router.post('/verify-otp', AuthController.verifyOTP);
+router.post('/verify-otp', authRateLimiter, AuthController.verifyOTP);
 
 /**
  * @swagger
@@ -173,7 +175,7 @@ router.post('/verify-otp', AuthController.verifyOTP);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/login', AuthController.login);
+router.post('/login', authRateLimiter, AuthController.login);
 
 /**
  * @swagger
@@ -218,7 +220,7 @@ router.post('/login', AuthController.login);
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/login-otp', AuthController.loginWithOTP);
+router.post('/login-otp', authRateLimiter, AuthController.loginWithOTP);
 
 /**
  * @swagger
@@ -260,6 +262,47 @@ router.post('/login-otp', AuthController.loginWithOTP);
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  */
-router.post('/reset-password', AuthController.resetPassword);
+router.post('/reset-password', authRateLimiter, AuthController.resetPassword);
+
+/**
+ * @swagger
+ * /auth/refresh-token:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Tokens refreshed successfully
+ *       401:
+ *         description: Invalid or expired refresh token
+ */
+router.post('/refresh-token', authRateLimiter, AuthController.refreshToken);
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Logout user and revoke refresh tokens
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ */
+router.post('/logout', authenticate, AuthController.logout);
 
 export default router;

@@ -86,7 +86,8 @@ export class PaymentController {
     try {
       // Get the signature from header for verification
       const signature = req.headers['verif-hash'] as string;
-      const rawBody = JSON.stringify(req.body);
+      // Use the raw body captured by the global JSON middleware, fallback to re-stringified body
+      const rawBody = (req as any).rawBody || JSON.stringify(req.body);
 
       // Verify webhook signature
       const isValid = PaymentService.verifyWebhookSignature(rawBody, signature);

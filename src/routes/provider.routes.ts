@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { ProviderController } from '../controllers/provider.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { UserRole } from '../types';
+import { createResourceLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
@@ -244,7 +245,7 @@ router.get('/:id/portfolio', ProviderController.getPortfolio);
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.post('/', authenticate, authorize(UserRole.PROVIDER), ProviderController.create);
+router.post('/', createResourceLimiter, authenticate, authorize(UserRole.PROVIDER), ProviderController.create);
 
 /**
  * @swagger
@@ -458,7 +459,7 @@ router.patch('/:id/availability', authenticate, authorize(UserRole.PROVIDER), Pr
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.post('/:id/portfolio', authenticate, authorize(UserRole.PROVIDER), ProviderController.addPortfolioImage);
+router.post('/:id/portfolio', createResourceLimiter, authenticate, authorize(UserRole.PROVIDER), ProviderController.addPortfolioImage);
 
 /**
  * @swagger
@@ -504,7 +505,7 @@ router.post('/:id/portfolio', authenticate, authorize(UserRole.PROVIDER), Provid
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.delete('/:id/portfolio/:portfolioId', authenticate, authorize(UserRole.PROVIDER), ProviderController.deletePortfolioImage);
+router.delete('/:id/portfolio/:portfolioId', createResourceLimiter, authenticate, authorize(UserRole.PROVIDER), ProviderController.deletePortfolioImage);
 
 /**
  * @swagger
@@ -567,7 +568,7 @@ router.delete('/:id/portfolio/:portfolioId', authenticate, authorize(UserRole.PR
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.post('/:id/verification', authenticate, authorize(UserRole.PROVIDER), ProviderController.submitVerification);
+router.post('/:id/verification', createResourceLimiter, authenticate, authorize(UserRole.PROVIDER), ProviderController.submitVerification);
 
 /**
  * @swagger

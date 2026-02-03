@@ -1,12 +1,15 @@
 import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
+import crypto from 'crypto';
 import { config } from '../config/config';
 import { UserModel } from '../models/User';
 import { OTPModel } from '../models/OTP';
 import { UserRole } from '../types';
 import { SmsService } from './sms.service';
+import { RefreshTokenModel } from '../models/RefreshToken';
 
 export interface AuthTokens {
   accessToken: string;
+  refreshToken: string;
   user: {
     id: string;
     username: string;
@@ -30,6 +33,18 @@ export class AuthService {
     };
 
     return jwt.sign(payload, secret, options);
+  }
+
+  /**
+   * Generate and persist a refresh token for a user
+   */
+  static async generateRefreshToken(userId: string): Promise<string> {
+    const token = crypto.randomBytes(64).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + config.jwt.refreshExpiresInDays);
+
+    await RefreshTokenModel.create(userId, token, expiresAt);
+    return token;
   }
 
   /**
@@ -57,11 +72,13 @@ export class AuthService {
     // Create user
     const user = await UserModel.create(username, phone, role, email, password);
 
-    // Generate token
+    // Generate tokens
     const accessToken = this.generateToken(user.id, user.role);
+    const refreshToken = await this.generateRefreshToken(user.id);
 
     return {
       accessToken,
+      refreshToken,
       user: {
         id: user.id,
         username: user.username,
@@ -143,9 +160,11 @@ export class AuthService {
     }
 
     const accessToken = this.generateToken(user.id, user.role);
+    const refreshToken = await this.generateRefreshToken(user.id);
 
     return {
       accessToken,
+      refreshToken,
       user: {
         id: user.id,
         username: user.username,
@@ -177,9 +196,11 @@ export class AuthService {
     }
 
     const accessToken = this.generateToken(user.id, user.role);
+    const refreshToken = await this.generateRefreshToken(user.id);
 
     return {
       accessToken,
+      refreshToken,
       user: {
         id: user.id,
         username: user.username,
@@ -204,5 +225,45 @@ export class AuthService {
     }
 
     await UserModel.updatePassword(user.id, newPassword);
+  }
+
+  /**
+   * Refresh access token using a valid refresh token
+   */
+  static async refreshTokens(refreshToken: string): Promise<AuthTokens> {
+    const record = await RefreshTokenModel.findValid(refreshToken);
+    if (!record) {
+      throw new Error('Invalid or expired refresh token');
+    }
+
+    const user = await UserModel.findById(record.userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Rotate refresh token: revoke old and issue new
+    await RefreshTokenModel.revokeById(record.id);
+    const newRefreshToken = await this.generateRefreshToken(user.id);
+    const accessToken = this.generateToken(user.id, user.role);
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        phone: user.phone,
+        email: user.email,
+        role: user.role,
+        isPhoneVerified: user.isPhoneVerified,
+      },
+    };
+  }
+
+  /**
+   * Logout user by revoking all their refresh tokens
+   */
+  static async logout(userId: string): Promise<void> {
+    await RefreshTokenModel.revokeAllForUser(userId);
   }
 }

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { ReviewController } from '../controllers/review.controller';
 import { authenticate } from '../middleware/auth';
+import { createResourceLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
@@ -110,7 +111,7 @@ router.get('/provider/:providerId', ReviewController.listForProvider);
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
-router.post('/', authenticate, ReviewController.create);
+router.post('/', createResourceLimiter, authenticate, ReviewController.create);
 
 /**
  * @swagger
