@@ -8,7 +8,7 @@ const router = Router();
 
 /**
  * @swagger
- * /providers/search:
+ * /api/providers/search:
  *   get:
  *     summary: Search providers with filters
  *     tags: [Providers]
@@ -108,7 +108,7 @@ router.get('/search', ProviderController.search);
 
 /**
  * @swagger
- * /providers/{id}:
+ * /api/providers/{id}:
  *   get:
  *     summary: Get provider profile by ID
  *     tags: [Providers]
@@ -144,7 +144,7 @@ router.get('/:id', ProviderController.getById);
 
 /**
  * @swagger
- * /providers/{id}/portfolio:
+ * /api/providers/{id}/portfolio:
  *   get:
  *     summary: Get provider portfolio images
  *     tags: [Providers]
@@ -178,7 +178,7 @@ router.get('/:id/portfolio', ProviderController.getPortfolio);
 
 /**
  * @swagger
- * /providers:
+ * /api/providers:
  *   post:
  *     summary: Create provider profile (Provider only)
  *     tags: [Providers]
@@ -249,7 +249,7 @@ router.post('/', createResourceLimiter, authenticate, authorize(UserRole.PROVIDE
 
 /**
  * @swagger
- * /providers/me/profile:
+ * /api/providers/me/profile:
  *   get:
  *     summary: Get current user's provider profile (Provider only)
  *     tags: [Providers]
@@ -283,7 +283,7 @@ router.get('/me/profile', authenticate, authorize(UserRole.PROVIDER), ProviderCo
 
 /**
  * @swagger
- * /providers/{id}:
+ * /api/providers/{id}:
  *   put:
  *     summary: Update provider profile (Provider only)
  *     tags: [Providers]
@@ -358,7 +358,7 @@ router.put('/:id', authenticate, authorize(UserRole.PROVIDER), ProviderControlle
 
 /**
  * @swagger
- * /providers/{id}/availability:
+ * /api/providers/{id}/availability:
  *   patch:
  *     summary: Update provider availability status (Provider only)
  *     tags: [Providers]
@@ -409,7 +409,7 @@ router.patch('/:id/availability', authenticate, authorize(UserRole.PROVIDER), Pr
 
 /**
  * @swagger
- * /providers/{id}/portfolio:
+ * /api/providers/{id}/portfolio:
  *   post:
  *     summary: Add portfolio image (Provider only)
  *     tags: [Providers]
@@ -463,7 +463,7 @@ router.post('/:id/portfolio', createResourceLimiter, authenticate, authorize(Use
 
 /**
  * @swagger
- * /providers/{id}/portfolio/{portfolioId}:
+ * /api/providers/{id}/portfolio/{portfolioId}:
  *   delete:
  *     summary: Delete portfolio image (Provider only)
  *     tags: [Providers]
@@ -509,7 +509,7 @@ router.delete('/:id/portfolio/:portfolioId', createResourceLimiter, authenticate
 
 /**
  * @swagger
- * /providers/{id}/verification:
+ * /api/providers/{id}/verification:
  *   post:
  *     summary: Submit verification request (Provider only)
  *     tags: [Providers]
@@ -572,7 +572,7 @@ router.post('/:id/verification', createResourceLimiter, authenticate, authorize(
 
 /**
  * @swagger
- * /providers/{id}/verification:
+ * /api/providers/{id}/verification:
  *   get:
  *     summary: Get verification request (Provider only)
  *     tags: [Providers]

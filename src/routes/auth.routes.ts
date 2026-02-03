@@ -7,7 +7,7 @@ const router = Router();
 
 /**
  * @swagger
- * /auth/register:
+ * /api/auth/register:
  *   post:
  *     summary: Register a new user
  *     tags: [Authentication]
@@ -18,9 +18,13 @@ const router = Router();
  *           schema:
  *             type: object
  *             required:
+ *               - username
  *               - phone
  *               - role
  *             properties:
+ *               username:
+ *                 type: string
+ *                 example: "john_doe"
  *               phone:
  *                 type: string
  *                 example: "+250788123456"
@@ -56,7 +60,7 @@ router.post('/register', authRateLimiter, AuthController.register);
 
 /**
  * @swagger
- * /auth/send-otp:
+ * /api/auth/send-otp:
  *   post:
  *     summary: Send OTP to phone number
  *     tags: [Authentication]
@@ -93,7 +97,7 @@ router.post('/send-otp', authRateLimiter, AuthController.sendOTP);
 
 /**
  * @swagger
- * /auth/verify-otp:
+ * /api/auth/verify-otp:
  *   post:
  *     summary: Verify OTP code
  *     tags: [Authentication]
@@ -135,7 +139,7 @@ router.post('/verify-otp', authRateLimiter, AuthController.verifyOTP);
 
 /**
  * @swagger
- * /auth/login:
+ * /api/auth/login:
  *   post:
  *     summary: Login with phone and password
  *     tags: [Authentication]
@@ -179,7 +183,7 @@ router.post('/login', authRateLimiter, AuthController.login);
 
 /**
  * @swagger
- * /auth/login-otp:
+ * /api/auth/login-otp:
  *   post:
  *     summary: Login with OTP (passwordless)
  *     tags: [Authentication]
@@ -224,7 +228,7 @@ router.post('/login-otp', authRateLimiter, AuthController.loginWithOTP);
 
 /**
  * @swagger
- * /auth/reset-password:
+ * /api/auth/reset-password:
  *   post:
  *     summary: Reset user password
  *     tags: [Authentication]
@@ -266,7 +270,7 @@ router.post('/reset-password', authRateLimiter, AuthController.resetPassword);
 
 /**
  * @swagger
- * /auth/refresh-token:
+ * /api/auth/refresh-token:
  *   post:
  *     summary: Refresh access token
  *     tags: [Authentication]
@@ -291,7 +295,7 @@ router.post('/refresh-token', authRateLimiter, AuthController.refreshToken);
 
 /**
  * @swagger
- * /auth/logout:
+ * /api/auth/logout:
  *   post:
  *     summary: Logout user and revoke refresh tokens
  *     tags: [Authentication]

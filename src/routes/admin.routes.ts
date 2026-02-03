@@ -11,7 +11,7 @@ router.use(authorize(UserRole.ADMIN));
 
 /**
  * @swagger
- * /admin/dashboard/summary:
+ * /api/admin/dashboard/summary:
  *   get:
  *     summary: Get dashboard summary statistics (Admin only)
  *     tags: [Admin]
@@ -39,7 +39,7 @@ router.get('/dashboard/summary', AdminController.getDashboardSummary);
 
 /**
  * @swagger
- * /admin/users:
+ * /api/admin/users:
  *   get:
  *     summary: List all users with filters (Admin only)
  *     tags: [Admin]
@@ -98,7 +98,7 @@ router.get('/users', AdminController.listUsers);
 
 /**
  * @swagger
- * /admin/providers:
+ * /api/admin/providers:
  *   get:
  *     summary: List all providers with filters (Admin only)
  *     tags: [Admin]
@@ -157,7 +157,7 @@ router.get('/providers', AdminController.listProviders);
 
 /**
  * @swagger
- * /admin/bookings:
+ * /api/admin/bookings:
  *   get:
  *     summary: List all bookings with filters (Admin only)
  *     tags: [Admin]
@@ -211,7 +211,7 @@ router.get('/bookings', AdminController.listBookings);
 
 /**
  * @swagger
- * /admin/verification-requests:
+ * /api/admin/verification-requests:
  *   get:
  *     summary: Get all verification requests (Admin only)
  *     tags: [Admin]
@@ -251,7 +251,7 @@ router.get('/verification-requests', AdminController.getVerificationRequests);
 
 /**
  * @swagger
- * /admin/verification-requests/{id}:
+ * /api/admin/verification-requests/{id}:
  *   get:
  *     summary: Get verification request by ID (Admin only)
  *     tags: [Admin]
@@ -293,7 +293,7 @@ router.get('/verification-requests/:id', AdminController.getVerificationRequest)
 
 /**
  * @swagger
- * /admin/verification-requests/{id}:
+ * /api/admin/verification-requests/{id}:
  *   patch:
  *     summary: Approve or reject verification request (Admin only)
  *     tags: [Admin]
@@ -356,7 +356,7 @@ router.patch('/verification-requests/:id', AdminController.reviewVerificationReq
 
 /**
  * @swagger
- * /admin/reviews/{id}:
+ * /api/admin/reviews/{id}:
  *   delete:
  *     summary: Delete a review (Admin only)
  *     tags: [Admin]

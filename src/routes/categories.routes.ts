@@ -7,7 +7,7 @@ const router = Router();
 
 /**
  * @swagger
- * /categories:
+ * /api/categories:
  *   get:
  *     summary: Get all service categories
  *     tags: [Categories]
@@ -44,7 +44,7 @@ router.get('/', async (_req, res) => {
 
 /**
  * @swagger
- * /categories/{id}:
+ * /api/categories/{id}:
  *   get:
  *     summary: Get category by ID
  *     tags: [Categories]
@@ -99,7 +99,7 @@ router.get('/:id', async (req, res) => {
 
 /**
  * @swagger
- * /categories:
+ * /api/categories:
  *   post:
  *     summary: Create a new category (Admin only)
  *     tags: [Categories]
@@ -166,7 +166,7 @@ router.post(
 
 /**
  * @swagger
- * /categories/{id}:
+ * /api/categories/{id}:
  *   put:
  *     summary: Update category (Admin only)
  *     tags: [Categories]
@@ -256,7 +256,7 @@ router.put(
 
 /**
  * @swagger
- * /categories/{id}:
+ * /api/categories/{id}:
  *   delete:
  *     summary: Delete category (Admin only)
  *     tags: [Categories]

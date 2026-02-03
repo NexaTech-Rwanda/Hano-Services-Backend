@@ -109,15 +109,7 @@ export class PaymentController {
 
       // Extract payment information from Flutterwave v4 webhook
       const {
-        id: chargeId,
         reference, // Transaction reference (our txRef)
-        status,
-        amount,
-        currency,
-        customer,
-        meta,
-        payment_method,
-        processor_response,
       } = data || {};
 
       // Handle different event types
@@ -178,7 +170,7 @@ export class PaymentController {
    * Legacy MTN callback (kept for backward compatibility)
    * @deprecated Use flutterwaveCallback instead
    */
-  static async mtnCallback(req: Request, res: Response): Promise<Response> {
+  static async mtnCallback(_req: Request, res: Response): Promise<Response> {
     console.warn('[PaymentController] MTN callback is deprecated. Use Flutterwave webhook instead.');
     return res.status(200).json({
       message: 'Deprecated endpoint. Use /api/payments/flutterwave/callback',
@@ -189,7 +181,7 @@ export class PaymentController {
    * Legacy Airtel callback (kept for backward compatibility)
    * @deprecated Use flutterwaveCallback instead
    */
-  static async airtelCallback(req: Request, res: Response): Promise<Response> {
+  static async airtelCallback(_req: Request, res: Response): Promise<Response> {
     console.warn('[PaymentController] Airtel callback is deprecated. Use Flutterwave webhook instead.');
     return res.status(200).json({
       message: 'Deprecated endpoint. Use /api/payments/flutterwave/callback',

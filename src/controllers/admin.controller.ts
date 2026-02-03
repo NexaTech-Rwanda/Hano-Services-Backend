@@ -49,6 +49,7 @@ export class AdminController {
         search,
         limit,
         offset,
+        cursor,
       });
 
       return res.json({
@@ -90,6 +91,7 @@ export class AdminController {
         categoryId,
         limit,
         offset,
+        cursor,
       });
 
       return res.json({
@@ -125,6 +127,7 @@ export class AdminController {
         status,
         limit,
         offset,
+        cursor,
       });
 
       return res.json({

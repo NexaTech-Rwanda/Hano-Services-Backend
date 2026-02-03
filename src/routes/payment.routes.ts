@@ -108,7 +108,7 @@ router.post('/airtel/callback', PaymentController.airtelCallback);
 
 /**
  * @swagger
- * /api/payments/:reference/status:
+ * /api/payments/{reference}/status:
  *   get:
  *     summary: Get payment status
  *     tags: [Payments]
