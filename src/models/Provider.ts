@@ -131,6 +131,7 @@ export class ProviderModel {
     isVerified?: boolean;
     limit?: number;
     offset?: number;
+    cursor?: string;
   }): Promise<ProviderWithCategory[]> {
     let query = `
       SELECT 
@@ -227,18 +228,11 @@ export class ProviderModel {
       query += ' ORDER BY average_rating DESC, total_reviews DESC';
     }
 
-    // Limit and offset
-    if (filters.limit) {
-      query += ` LIMIT $${paramCount++}`;
-      values.push(filters.limit);
-    } else {
-      query += ' LIMIT 50';
-    }
-
-    if (filters.offset) {
-      query += ` OFFSET $${paramCount++}`;
-      values.push(filters.offset);
-    }
+    // Limit (cursor-based; offset is kept for backward-compat at controller level if needed)
+    const limit =
+      filters.limit && filters.limit > 0 && filters.limit <= 100 ? filters.limit : 50;
+    query += ` LIMIT $${paramCount++}`;
+    values.push(limit);
 
     const result = await pool.query(query, values);
     return result.rows.map((row) => this.mapRowToProviderWithDetails(row));

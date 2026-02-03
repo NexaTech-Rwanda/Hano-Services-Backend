@@ -130,6 +130,7 @@ export class ProviderService {
     isVerified?: boolean;
     limit?: number;
     offset?: number;
+    cursor?: string;
   }): Promise<ProviderWithCategory[]> {
     return await ProviderModel.search(filters);
   }

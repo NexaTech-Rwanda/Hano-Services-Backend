@@ -42,8 +42,9 @@ export class AdminController {
       const offset = req.query.offset
         ? parseInt(req.query.offset as string, 10)
         : undefined;
+      const cursor = req.query.cursor as string | undefined;
 
-      const users = await AdminService.listUsers({
+      const { items, nextCursor } = await AdminService.listUsers({
         role,
         search,
         limit,
@@ -52,8 +53,9 @@ export class AdminController {
 
       return res.json({
         status: 'success',
-        data: users,
-        count: users.length,
+        data: items,
+        count: items.length,
+        nextCursor,
       });
     } catch (error: any) {
       return res.status(400).json({
@@ -81,8 +83,9 @@ export class AdminController {
       const offset = req.query.offset
         ? parseInt(req.query.offset as string, 10)
         : undefined;
+      const cursor = req.query.cursor as string | undefined;
 
-      const providers = await AdminService.listProviders({
+      const { items, nextCursor } = await AdminService.listProviders({
         isVerified,
         categoryId,
         limit,
@@ -91,8 +94,9 @@ export class AdminController {
 
       return res.json({
         status: 'success',
-        data: providers,
-        count: providers.length,
+        data: items,
+        count: items.length,
+        nextCursor,
       });
     } catch (error: any) {
       return res.status(400).json({
@@ -115,8 +119,9 @@ export class AdminController {
       const offset = req.query.offset
         ? parseInt(req.query.offset as string, 10)
         : undefined;
+      const cursor = req.query.cursor as string | undefined;
 
-      const bookings = await AdminService.listBookings({
+      const { items, nextCursor } = await AdminService.listBookings({
         status,
         limit,
         offset,
@@ -124,8 +129,9 @@ export class AdminController {
 
       return res.json({
         status: 'success',
-        data: bookings,
-        count: bookings.length,
+        data: items,
+        count: items.length,
+        nextCursor,
       });
     } catch (error: any) {
       return res.status(400).json({

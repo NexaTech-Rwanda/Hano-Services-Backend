@@ -275,10 +275,10 @@ export class ProviderController {
         .optional()
         .isInt({ min: 1, max: 100 })
         .withMessage('Limit must be between 1 and 100'),
-      query('offset')
+      query('cursor')
         .optional()
-        .isInt({ min: 0 })
-        .withMessage('Offset must be a non-negative integer'),
+        .isString()
+        .withMessage('cursor must be a string'),
     ]),
     async (req: Request, res: Response) => {
       try {
@@ -312,10 +312,10 @@ export class ProviderController {
           filters.isVerified = req.query.isVerified === 'true';
         }
         if (req.query.limit) {
-          filters.limit = parseInt(req.query.limit as string);
+          filters.limit = parseInt(req.query.limit as string, 10);
         }
-        if (req.query.offset) {
-          filters.offset = parseInt(req.query.offset as string);
+        if (req.query.cursor) {
+          filters.cursor = req.query.cursor as string;
         }
 
         const providers = await ProviderService.searchProviders(filters);
