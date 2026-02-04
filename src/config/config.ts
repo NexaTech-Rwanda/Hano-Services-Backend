@@ -33,12 +33,29 @@ if (process.env.NODE_ENV === 'production') {
       'DB_PASSWORD must be set in production environment.'
     );
   }
+
+  const redisEnabled = process.env.REDIS_ENABLED === 'true';
+  if (redisEnabled) {
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl || redisUrl === '') {
+      throw new Error('REDIS_URL must be set when REDIS_ENABLED=true in production.');
+    }
+  }
 }
 
 export const config = {
   // Server
   nodeEnv: process.env.NODE_ENV,
   port: parseInt(process.env.PORT || '3000'),
+
+  // Redis (cache)
+  redis: {
+    enabled: process.env.REDIS_ENABLED === 'true',
+    url: process.env.REDIS_URL,
+    password: process.env.REDIS_PASSWORD,
+    tls: process.env.REDIS_TLS === 'true',
+    defaultTtlSeconds: parseInt(process.env.REDIS_DEFAULT_TTL_SECONDS || '60', 10),
+  },
 
   // Database
   database: {

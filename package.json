@@ -39,6 +39,7 @@
     "node-cron": "^3.0.3",
     "pg": "^8.11.3",
     "pindo-sms": "^1.0.5",
+    "redis": "^4.7.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "twilio": "^5.12.0",
