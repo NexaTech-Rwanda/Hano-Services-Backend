@@ -106,12 +106,12 @@ export class ProviderController {
             provider;
         }
 
-        res.status(201).json({
+        return res.status(201).json({
           status: 'success',
           data: finalProvider,
         });
       } catch (error: any) {
-        res.status(400).json({
+        return res.status(400).json({
           status: 'error',
           message: error.message,
         });
@@ -238,11 +238,10 @@ export class ProviderController {
             address,
           });
 
-          res.json({
+          return res.json({
             status: 'success',
             data: provider,
           });
-          return;
         }
 
         const provider = await ProviderService.updateProfile(providerId, userId, {
@@ -257,12 +256,12 @@ export class ProviderController {
           address,
         });
 
-        res.json({
+        return res.json({
           status: 'success',
           data: provider,
         });
       } catch (error: any) {
-        res.status(400).json({
+        return res.status(400).json({
           status: 'error',
           message: error.message,
         });
@@ -472,12 +471,12 @@ export class ProviderController {
           description
         );
 
-        res.status(201).json({
+        return res.status(201).json({
           status: 'success',
           data: portfolio,
         });
       } catch (error: any) {
-        res.status(400).json({
+        return res.status(400).json({
           status: 'error',
           message: error.message,
         });
