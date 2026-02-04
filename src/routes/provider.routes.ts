@@ -3,6 +3,7 @@ import { ProviderController } from '../controllers/provider.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { UserRole } from '../types';
 import { createResourceLimiter } from '../middleware/rateLimit';
+import { upload } from '../middleware/upload';
 
 const router = Router();
 
@@ -187,6 +188,43 @@ router.get('/:id/portfolio', ProviderController.getPortfolio);
  *     requestBody:
  *       required: true
  *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - serviceCategoryId
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "John Doe"
+ *               serviceCategoryId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: "123e4567-e89b-12d3-a456-426614174000"
+ *               photo:
+ *                 type: string
+ *                 format: binary
+ *               priceRangeMin:
+ *                 type: number
+ *                 example: 10000
+ *               priceRangeMax:
+ *                 type: number
+ *                 example: 50000
+ *               yearsOfExperience:
+ *                 type: integer
+ *                 example: 5
+ *               latitude:
+ *                 type: number
+ *                 format: float
+ *                 example: -1.9441
+ *               longitude:
+ *                 type: number
+ *                 format: float
+ *                 example: 30.0619
+ *               address:
+ *                 type: string
+ *                 example: "Kigali, Rwanda"
  *         application/json:
  *           schema:
  *             type: object
@@ -245,7 +283,14 @@ router.get('/:id/portfolio', ProviderController.getPortfolio);
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.post('/', createResourceLimiter, authenticate, authorize(UserRole.PROVIDER), ProviderController.create);
+router.post(
+  '/',
+  createResourceLimiter,
+  authenticate,
+  authorize(UserRole.PROVIDER),
+  upload.single('photo'),
+  ProviderController.create
+);
 
 /**
  * @swagger
@@ -300,6 +345,39 @@ router.get('/me/profile', authenticate, authorize(UserRole.PROVIDER), ProviderCo
  *     requestBody:
  *       required: true
  *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "John Doe"
+ *               photo:
+ *                 type: string
+ *                 format: binary
+ *               serviceCategoryId:
+ *                 type: string
+ *                 format: uuid
+ *               priceRangeMin:
+ *                 type: number
+ *                 example: 10000
+ *               priceRangeMax:
+ *                 type: number
+ *                 example: 50000
+ *               yearsOfExperience:
+ *                 type: integer
+ *                 example: 5
+ *               latitude:
+ *                 type: number
+ *                 format: float
+ *                 example: -1.9441
+ *               longitude:
+ *                 type: number
+ *                 format: float
+ *                 example: 30.0619
+ *               address:
+ *                 type: string
+ *                 example: "Kigali, Rwanda"
  *         application/json:
  *           schema:
  *             type: object
@@ -354,7 +432,13 @@ router.get('/me/profile', authenticate, authorize(UserRole.PROVIDER), ProviderCo
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.put('/:id', authenticate, authorize(UserRole.PROVIDER), ProviderController.update);
+router.put(
+  '/:id',
+  authenticate,
+  authorize(UserRole.PROVIDER),
+  upload.single('photo'),
+  ProviderController.update
+);
 
 /**
  * @swagger
@@ -426,11 +510,23 @@ router.patch('/:id/availability', authenticate, authorize(UserRole.PROVIDER), Pr
  *     requestBody:
  *       required: true
  *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *               imageUrl:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://example.com/image.jpg"
+ *               description:
+ *                 type: string
+ *                 example: "Completed bathroom renovation"
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - imageUrl
  *             properties:
  *               imageUrl:
  *                 type: string
@@ -459,7 +555,14 @@ router.patch('/:id/availability', authenticate, authorize(UserRole.PROVIDER), Pr
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.post('/:id/portfolio', createResourceLimiter, authenticate, authorize(UserRole.PROVIDER), ProviderController.addPortfolioImage);
+router.post(
+  '/:id/portfolio',
+  createResourceLimiter,
+  authenticate,
+  authorize(UserRole.PROVIDER),
+  upload.single('image'),
+  ProviderController.addPortfolioImage
+);
 
 /**
  * @swagger

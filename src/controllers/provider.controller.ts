@@ -1,11 +1,25 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
+import path from 'path';
 import { body, query } from 'express-validator';
 import { validate } from '../middleware/validation';
 import { AuthRequest } from '../middleware/auth';
 import { ProviderService } from '../services/provider.service';
 import { ProviderAvailability } from '../types';
+import { StorageService } from '../services/storage.service';
 
 export class ProviderController {
+  private static getFileExtension(file: Express.Multer.File): string {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (ext && ext.length <= 10) return ext;
+
+    const mime = (file.mimetype || '').toLowerCase();
+    if (mime === 'image/jpeg') return '.jpg';
+    if (mime === 'image/png') return '.png';
+    if (mime === 'image/webp') return '.webp';
+    return '';
+  }
+
   /**
    * Create provider profile
    * POST /api/providers
@@ -41,6 +55,7 @@ export class ProviderController {
     async (req: AuthRequest, res: Response) => {
       try {
         const userId = req.userId!;
+        const uploadedPhoto = (req as any).file as Express.Multer.File | undefined;
         const {
           name,
           serviceCategoryId,
@@ -58,7 +73,7 @@ export class ProviderController {
           name,
           serviceCategoryId,
           {
-            photo,
+            photo: uploadedPhoto ? undefined : photo,
             priceRangeMin,
             priceRangeMax,
             yearsOfExperience,
@@ -68,9 +83,32 @@ export class ProviderController {
           }
         );
 
+        let finalProvider = provider;
+        if (uploadedPhoto) {
+          if (!uploadedPhoto.mimetype?.toLowerCase().startsWith('image/')) {
+            return res.status(400).json({
+              status: 'error',
+              message: 'Uploaded photo must be an image',
+            });
+          }
+
+          const ext = this.getFileExtension(uploadedPhoto);
+          const namePart = crypto.randomBytes(8).toString('hex');
+          const filePath = `providers/${provider.id}/photo-${Date.now()}-${namePart}${ext}`;
+          const { url } = await StorageService.uploadImage({
+            path: filePath,
+            contentType: uploadedPhoto.mimetype,
+            file: uploadedPhoto.buffer,
+          });
+
+          finalProvider =
+            (await ProviderService.updateProfile(provider.id, userId, { photo: url })) ||
+            provider;
+        }
+
         res.status(201).json({
           status: 'success',
-          data: provider,
+          data: finalProvider,
         });
       } catch (error: any) {
         res.status(400).json({
@@ -157,6 +195,7 @@ export class ProviderController {
       try {
         const userId = req.userId!;
         const providerId = req.params.id;
+        const uploadedPhoto = (req as any).file as Express.Multer.File | undefined;
         const {
           name,
           photo,
@@ -168,6 +207,43 @@ export class ProviderController {
           longitude,
           address,
         } = req.body;
+
+        if (uploadedPhoto) {
+          await ProviderService.updateProfile(providerId, userId, {});
+          if (!uploadedPhoto.mimetype?.toLowerCase().startsWith('image/')) {
+            return res.status(400).json({
+              status: 'error',
+              message: 'Uploaded photo must be an image',
+            });
+          }
+
+          const ext = this.getFileExtension(uploadedPhoto);
+          const namePart = crypto.randomBytes(8).toString('hex');
+          const filePath = `providers/${providerId}/photo-${Date.now()}-${namePart}${ext}`;
+          const { url } = await StorageService.uploadImage({
+            path: filePath,
+            contentType: uploadedPhoto.mimetype,
+            file: uploadedPhoto.buffer,
+          });
+
+          const provider = await ProviderService.updateProfile(providerId, userId, {
+            name,
+            photo: url,
+            serviceCategoryId,
+            priceRangeMin,
+            priceRangeMax,
+            yearsOfExperience,
+            latitude,
+            longitude,
+            address,
+          });
+
+          res.json({
+            status: 'success',
+            data: provider,
+          });
+          return;
+        }
 
         const provider = await ProviderService.updateProfile(providerId, userId, {
           name,
@@ -340,7 +416,7 @@ export class ProviderController {
    */
   static addPortfolioImage = [
     validate([
-      body('imageUrl').isURL().withMessage('Valid image URL is required'),
+      body('imageUrl').optional().isURL().withMessage('Valid image URL is required'),
       body('description')
         .optional()
         .isString()
@@ -350,12 +426,49 @@ export class ProviderController {
       try {
         const userId = req.userId!;
         const providerId = req.params.id;
+        const uploadedImage = (req as any).file as Express.Multer.File | undefined;
         const { imageUrl, description } = req.body;
+
+        if (!uploadedImage && !imageUrl) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Either imageUrl or an image file is required',
+          });
+        }
+
+        // Verify provider ownership before uploading
+        const myProvider = await ProviderService.getProfileByUserId(userId);
+        if (!myProvider || myProvider.id !== providerId) {
+          return res.status(403).json({
+            status: 'error',
+            message: 'Unauthorized: You can only add to your own portfolio',
+          });
+        }
+
+        let finalImageUrl = imageUrl;
+        if (uploadedImage) {
+          if (!uploadedImage.mimetype?.toLowerCase().startsWith('image/')) {
+            return res.status(400).json({
+              status: 'error',
+              message: 'Uploaded portfolio image must be an image',
+            });
+          }
+
+          const ext = this.getFileExtension(uploadedImage);
+          const namePart = crypto.randomBytes(8).toString('hex');
+          const filePath = `providers/${providerId}/portfolio/image-${Date.now()}-${namePart}${ext}`;
+          const { url } = await StorageService.uploadImage({
+            path: filePath,
+            contentType: uploadedImage.mimetype,
+            file: uploadedImage.buffer,
+          });
+          finalImageUrl = url;
+        }
 
         const portfolio = await ProviderService.addPortfolioImage(
           providerId,
           userId,
-          imageUrl,
+          finalImageUrl,
           description
         );
 
