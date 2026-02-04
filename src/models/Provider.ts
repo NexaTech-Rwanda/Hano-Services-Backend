@@ -133,6 +133,19 @@ export class ProviderModel {
     offset?: number;
     cursor?: string;
   }): Promise<ProviderWithCategory[]> {
+    const values: any[] = [];
+    let paramCount = 1;
+
+    const hasLocation = filters.latitude != null && filters.longitude != null;
+    let userPointExpr = '';
+    if (hasLocation) {
+      const lonParam = paramCount++;
+      values.push(filters.longitude);
+      const latParam = paramCount++;
+      values.push(filters.latitude);
+      userPointExpr = `ST_SetSRID(ST_MakePoint($${lonParam}, $${latParam}), 4326)::geography`;
+    }
+
     let query = `
       SELECT 
         p.*,
@@ -142,18 +155,9 @@ export class ProviderModel {
         COUNT(DISTINCT pf.id) as portfolio_count
     `;
 
-    // Add distance calculation if location provided
-    if (filters.latitude && filters.longitude) {
+    if (hasLocation) {
       query += `,
-        (
-          6371 * acos(
-            cos(radians(${filters.latitude})) *
-            cos(radians(p.latitude)) *
-            cos(radians(p.longitude) - radians(${filters.longitude})) +
-            sin(radians(${filters.latitude})) *
-            sin(radians(p.latitude))
-          )
-        ) as distance_km
+        (ST_Distance(p.geo_location, ${userPointExpr}) / 1000.0) as distance_km
       `;
     }
 
@@ -166,8 +170,6 @@ export class ProviderModel {
     `;
 
     const conditions: string[] = [];
-    const values: any[] = [];
-    let paramCount = 1;
 
     if (filters.serviceCategoryId) {
       conditions.push(`p.service_category_id = $${paramCount++}`);
@@ -198,6 +200,14 @@ export class ProviderModel {
       values.push(filters.maxPrice);
     }
 
+    if (hasLocation && filters.maxDistance != null) {
+      const maxDistanceMeters = filters.maxDistance * 1000;
+      conditions.push(
+        `p.geo_location IS NOT NULL AND ST_DWithin(p.geo_location, ${userPointExpr}, $${paramCount++})`
+      );
+      values.push(maxDistanceMeters);
+    }
+
     if (conditions.length > 0) {
       query += ' AND ' + conditions.join(' AND ');
     }
@@ -210,20 +220,8 @@ export class ProviderModel {
       values.push(filters.minRating);
     }
 
-    // Filter by distance
-    if (filters.latitude && filters.longitude && filters.maxDistance) {
-      query = `
-        SELECT * FROM (
-          ${query}
-        ) as filtered_providers
-        WHERE distance_km <= $${paramCount++}
-      `;
-      values.push(filters.maxDistance);
-    }
-
-    // Order by distance if location provided, otherwise by rating
-    if (filters.latitude && filters.longitude) {
-      query += ' ORDER BY distance_km ASC';
+    if (hasLocation) {
+      query += ' ORDER BY distance_km ASC NULLS LAST';
     } else {
       query += ' ORDER BY average_rating DESC, total_reviews DESC';
     }

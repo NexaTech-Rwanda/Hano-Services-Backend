@@ -253,7 +253,7 @@ export class AuthController {
   static async logout(req: Request, res: Response): Promise<Response> {
     try {
       // `authenticate` middleware should attach userId to request
-      const userId = (req as any).user?.userId as string | undefined;
+      const userId = (req as any).userId as string | undefined;
       if (!userId) {
         return res.status(401).json({
           status: 'error',

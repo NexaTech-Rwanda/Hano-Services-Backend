@@ -86,6 +86,7 @@ import providerRoutes from './routes/provider.routes';
 import adminRoutes from './routes/admin.routes';
 import reviewRoutes from './routes/review.routes';
 import paymentRoutes from './routes/payment.routes';
+import userRoutes from './routes/user.routes';
 
 /**
  * @swagger
@@ -127,6 +128,7 @@ app.use('/api/providers', providerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/users', userRoutes);
 
 // Error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

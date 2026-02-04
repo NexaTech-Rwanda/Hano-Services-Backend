@@ -1,6 +1,9 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Enable PostGIS extension
+CREATE EXTENSION IF NOT EXISTS postgis;
+
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -39,6 +42,7 @@ CREATE TABLE IF NOT EXISTS providers (
     is_verified BOOLEAN DEFAULT FALSE,
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
+    geo_location geography(Point, 4326),
     address TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -64,9 +68,20 @@ CREATE TABLE IF NOT EXISTS bookings (
     description TEXT,
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
+    geo_location geography(Point, 4326),
     address TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- User Locations table (tracking)
+CREATE TABLE IF NOT EXISTS user_locations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    geo_location geography(Point, 4326),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Reviews table
@@ -114,20 +129,62 @@ CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_providers_user_id ON providers(user_id);
 CREATE INDEX IF NOT EXISTS idx_providers_category ON providers(service_category_id);
 CREATE INDEX IF NOT EXISTS idx_providers_location ON providers(latitude, longitude);
+CREATE INDEX IF NOT EXISTS idx_providers_geo_location ON providers USING GIST (geo_location);
 CREATE INDEX IF NOT EXISTS idx_providers_availability ON providers(availability);
 CREATE INDEX IF NOT EXISTS idx_providers_verification ON providers(verification_status);
 CREATE INDEX IF NOT EXISTS idx_bookings_customer ON bookings(customer_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_provider ON bookings(provider_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
+CREATE INDEX IF NOT EXISTS idx_bookings_geo_location ON bookings USING GIST (geo_location);
 CREATE INDEX IF NOT EXISTS idx_reviews_provider ON reviews(provider_id);
 CREATE INDEX IF NOT EXISTS idx_otps_phone ON otps(phone);
 CREATE INDEX IF NOT EXISTS idx_otps_expires ON otps(expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_user_locations_user_id ON user_locations(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_locations_geo_location ON user_locations USING GIST (geo_location);
+CREATE INDEX IF NOT EXISTS idx_user_locations_created_at ON user_locations(created_at);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION sync_providers_geo_location()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL THEN
+        NEW.geo_location := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geography;
+    ELSE
+        NEW.geo_location := NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION sync_bookings_geo_location()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL THEN
+        NEW.geo_location := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geography;
+    ELSE
+        NEW.geo_location := NULL;
+    END IF;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE OR REPLACE FUNCTION sync_user_locations_geo_location()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.latitude IS NOT NULL AND NEW.longitude IS NOT NULL THEN
+        NEW.geo_location := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326)::geography;
+    ELSE
+        NEW.geo_location := NULL;
+    END IF;
     RETURN NEW;
 END;
 $$ language 'plpgsql';
@@ -139,11 +196,26 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
 CREATE TRIGGER update_providers_updated_at BEFORE UPDATE ON providers
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_sync_providers_geo_location ON providers;
+CREATE TRIGGER trg_sync_providers_geo_location
+    BEFORE INSERT OR UPDATE OF latitude, longitude ON providers
+    FOR EACH ROW EXECUTE FUNCTION sync_providers_geo_location();
+
 CREATE TRIGGER update_bookings_updated_at BEFORE UPDATE ON bookings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_sync_bookings_geo_location ON bookings;
+CREATE TRIGGER trg_sync_bookings_geo_location
+    BEFORE INSERT OR UPDATE OF latitude, longitude ON bookings
+    FOR EACH ROW EXECUTE FUNCTION sync_bookings_geo_location();
 
 CREATE TRIGGER update_reviews_updated_at BEFORE UPDATE ON reviews
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_verification_requests_updated_at BEFORE UPDATE ON verification_requests
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_sync_user_locations_geo_location ON user_locations;
+CREATE TRIGGER trg_sync_user_locations_geo_location
+    BEFORE INSERT OR UPDATE OF latitude, longitude ON user_locations
+    FOR EACH ROW EXECUTE FUNCTION sync_user_locations_geo_location();
