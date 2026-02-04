@@ -28,23 +28,42 @@ export class SmsService {
       return;
     }
 
+    const baseUrl = String(config.sms.apiUrl).replace(/\/+$/, '');
+    const smsUrl = (() => {
+      // Support env values like:
+      // - https://api.pindo.io
+      // - https://api.pindo.io/v1
+      // - https://api.pindo.io/v1/sms
+      // - https://api.pindo.io/v1/sms/
+      if (/\/v1\/sms\/?$/i.test(baseUrl)) return `${baseUrl}/`;
+      if (/\/v1\/?$/i.test(baseUrl)) return `${baseUrl}/sms/`;
+      return `${baseUrl}/v1/sms/`;
+    })();
+
     try {
       await axios.post(
-        `${config.sms.apiUrl}/v1/sms`,
+        smsUrl,
         {
           to,
-          from: config.pindo.smsFrom,
           text: message,
+          sender: config.pindo.smsFrom,
         },
         {
           headers: {
             Authorization: `Bearer ${config.sms.apiKey}`,
+            Accept: '*/*',
             'Content-Type': 'application/json',
           },
         }
       );
     } catch (error: any) {
-      console.error('[SmsService] Failed to send SMS:', error.response?.data || error.message);
+      const status = error?.response?.status;
+      const data = error?.response?.data;
+      console.error('[SmsService] Failed to send SMS:', {
+        status,
+        url: smsUrl,
+        data: data || error.message,
+      });
       throw new Error('Failed to send SMS message');
     }
   }
