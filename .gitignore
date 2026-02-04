@@ -37,8 +37,3 @@ coverage/
 # Temporary files
 tmp/
 temp/
-
-# Documentation
-/POSTMAN_REQUESTS.md
-/SETUP.md
-/API_DOCUMENTATION.md
