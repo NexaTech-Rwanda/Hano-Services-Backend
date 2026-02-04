@@ -41,6 +41,18 @@ if (process.env.NODE_ENV === 'production') {
       throw new Error('REDIS_URL must be set when REDIS_ENABLED=true in production.');
     }
   }
+
+  const expoEnabled = process.env.EXPO_ENABLED === 'true';
+  if (expoEnabled) {
+    const projectId = process.env.EXPO_PROJECT_ID;
+    const accessToken = process.env.EXPO_ACCESS_TOKEN;
+    if (!projectId || projectId === '') {
+      throw new Error('EXPO_PROJECT_ID must be set when EXPO_ENABLED=true in production.');
+    }
+    if (!accessToken || accessToken === '') {
+      throw new Error('EXPO_ACCESS_TOKEN must be set when EXPO_ENABLED=true in production.');
+    }
+  }
 }
 
 export const config = {
@@ -55,6 +67,12 @@ export const config = {
     password: process.env.REDIS_PASSWORD,
     tls: process.env.REDIS_TLS === 'true',
     defaultTtlSeconds: parseInt(process.env.REDIS_DEFAULT_TTL_SECONDS || '60', 10),
+  },
+
+  // Expo Push Notifications
+  expo: {
+    projectId: process.env.EXPO_PROJECT_ID,
+    accessToken: process.env.EXPO_ACCESS_TOKEN,
   },
 
   // Database
