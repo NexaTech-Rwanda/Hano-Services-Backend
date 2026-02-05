@@ -126,7 +126,7 @@ export class PushNotificationService {
       } catch (error: any) {
         console.error('Error sending push notification chunk:', error);
         // Optionally collect a synthetic error ticket
-        tickets.push(...chunk.map((msg) => ({
+        tickets.push(...chunk.map(() => ({
           status: 'error' as const,
           message: 'Failed to send chunk',
           details: error.message,

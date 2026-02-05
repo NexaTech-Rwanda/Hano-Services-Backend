@@ -140,7 +140,7 @@ const router = Router();
  *       403:
  *         description: Forbidden (not a customer)
  */
-router.post('/', JobController.create);
+router.post('/', ...JobController.create);
 
 /**
  * @swagger
@@ -221,7 +221,7 @@ router.post('/', JobController.create);
  *       403:
  *         description: Forbidden (not a provider)
  */
-router.get('/', JobController.list);
+router.get('/', ...JobController.list);
 
 /**
  * @swagger
@@ -266,7 +266,7 @@ router.get('/', JobController.list);
  *       403:
  *         description: Forbidden (not a customer)
  */
-router.get('/my', JobController.getMyJobs);
+router.get('/my', ...JobController.getMyJobs);
 
 /**
  * @swagger
@@ -359,7 +359,7 @@ router.get('/:id', JobController.getById);
  *       404:
  *         description: Job not found
  */
-router.patch('/:id', JobController.update);
+router.patch('/:id', ...JobController.update);
 
 /**
  * @swagger
@@ -479,6 +479,6 @@ router.patch('/:id/assign', JobController.assignToProvider);
  *       404:
  *         description: Job not found
  */
-router.patch('/:id/status', JobController.updateStatus);
+router.patch('/:id/status', ...JobController.updateStatus);
 
 export default router;

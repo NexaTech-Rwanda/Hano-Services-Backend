@@ -60,7 +60,7 @@ export class PaymentService {
 
     try {
       const response = await axios.post(
-        config.payments.flutterwave.authUrl,
+        config.payments.flutterwave.authUrl!,
         new URLSearchParams({
           client_id: clientId,
           client_secret: clientSecret,

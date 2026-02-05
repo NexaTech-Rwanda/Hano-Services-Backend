@@ -37,7 +37,7 @@ export class StorageService {
     const bucket = options.bucket || config.supabase.bucket;
 
     const { error } = await supabase.storage
-      .from(bucket)
+      .from(bucket!)
       .upload(options.path, options.file, {
         contentType: options.contentType,
         upsert: true,
@@ -54,7 +54,7 @@ export class StorageService {
     }
 
     // Otherwise, try to use Supabase's public URL helper (requires bucket to be public)
-    const { data } = supabase.storage.from(bucket).getPublicUrl(options.path);
+    const { data } = supabase.storage.from(bucket!).getPublicUrl(options.path);
     const url = data.publicUrl;
 
     return { url, path: options.path };

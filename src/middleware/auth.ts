@@ -28,7 +28,7 @@ export const authenticate = (
     }
 
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, config.jwt.secret) as {
+    const decoded = jwt.verify(token, config.jwt.secret!) as unknown as {
       userId: string;
       role: UserRole;
     };
