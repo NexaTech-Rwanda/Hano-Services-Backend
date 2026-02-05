@@ -225,6 +225,54 @@ router.get('/:id/portfolio', ProviderController.getPortfolio);
  *               address:
  *                 type: string
  *                 example: "Kigali, Rwanda"
+ *               bio:
+ *                 type: string
+ *                 example: "Experienced plumber specializing in residential installations."
+ *               certifications:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["Certified Plumber", "Safety Training 2023"]
+ *               languages:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["English", "French", "Kinyarwanda"]
+ *               availabilityHours:
+ *                 type: object
+ *                 example:
+ *                   mon: { open: "08:00", close: "17:00" }
+ *                   tue: { open: "08:00", close: "17:00" }
+ *               responseRate:
+ *                 type: number
+ *                 format: float
+ *                 minimum: 0
+ *                 maximum: 100
+ *                 example: 95.5
+ *               responseTimeMinutes:
+ *                 type: integer
+ *                 minimum: 0
+ *                 example: 30
+ *               website:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://johndoe-plumbing.rw"
+ *               socialLinks:
+ *                 type: object
+ *                 example:
+ *                   twitter: "https://twitter.com/johndoe"
+ *                   linkedin: "https://linkedin.com/in/johndoe"
+ *               preferredContactMethod:
+ *                 type: string
+ *                 enum: [phone, email, whatsapp, sms]
+ *                 example: "whatsapp"
+ *               isFeatured:
+ *                 type: boolean
+ *                 example: false
+ *               featuredUntil:
+ *                 type: string
+ *                 format: date-time
+ *                 example: "2025-03-01T00:00:00Z"
  *         application/json:
  *           schema:
  *             type: object

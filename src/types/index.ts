@@ -53,6 +53,17 @@ export interface Provider {
     longitude: number;
     address?: string;
   };
+  bio?: string;
+  certifications?: string[];
+  languages?: string[];
+  availabilityHours?: Record<string, { open: string; close: string }>;
+  responseRate?: number;
+  responseTimeMinutes?: number;
+  website?: string;
+  socialLinks?: Record<string, string>;
+  preferredContactMethod?: 'phone' | 'email' | 'whatsapp' | 'sms';
+  isFeatured?: boolean;
+  featuredUntil?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

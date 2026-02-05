@@ -51,6 +51,26 @@ export class ProviderController {
         .optional()
         .isFloat({ min: -180, max: 180 })
         .withMessage('Valid longitude is required'),
+      body('bio').optional().isString().withMessage('Bio must be a string'),
+      body('certifications').optional().isArray().withMessage('Certifications must be an array'),
+      body('languages').optional().isArray().withMessage('Languages must be an array'),
+      body('availabilityHours').optional().isObject().withMessage('Availability hours must be an object'),
+      body('responseRate')
+        .optional()
+        .isFloat({ min: 0, max: 100 })
+        .withMessage('Response rate must be between 0 and 100'),
+      body('responseTimeMinutes')
+        .optional()
+        .isInt({ min: 0 })
+        .withMessage('Response time minutes must be a non-negative integer'),
+      body('website').optional().isURL().withMessage('Website must be a valid URL'),
+      body('socialLinks').optional().isObject().withMessage('Social links must be an object'),
+      body('preferredContactMethod')
+        .optional()
+        .isIn(['phone', 'email', 'whatsapp', 'sms'])
+        .withMessage('Preferred contact method is invalid'),
+      body('isFeatured').optional().isBoolean().withMessage('isFeatured must be a boolean'),
+      body('featuredUntil').optional().isISO8601().withMessage('featuredUntil must be a valid date'),
     ]),
     async (req: AuthRequest, res: Response) => {
       try {
@@ -66,6 +86,17 @@ export class ProviderController {
           latitude,
           longitude,
           address,
+          bio,
+          certifications,
+          languages,
+          availabilityHours,
+          responseRate,
+          responseTimeMinutes,
+          website,
+          socialLinks,
+          preferredContactMethod,
+          isFeatured,
+          featuredUntil,
         } = req.body;
 
         const provider = await ProviderService.createProfile(
@@ -80,6 +111,17 @@ export class ProviderController {
             latitude,
             longitude,
             address,
+            bio,
+            certifications,
+            languages,
+            availabilityHours,
+            responseRate,
+            responseTimeMinutes,
+            website,
+            socialLinks,
+            preferredContactMethod,
+            isFeatured,
+            featuredUntil: featuredUntil ? new Date(featuredUntil) : undefined,
           }
         );
 
@@ -190,6 +232,26 @@ export class ProviderController {
         .optional()
         .isFloat({ min: -180, max: 180 })
         .withMessage('Valid longitude is required'),
+      body('bio').optional().isString().withMessage('Bio must be a string'),
+      body('certifications').optional().isArray().withMessage('Certifications must be an array'),
+      body('languages').optional().isArray().withMessage('Languages must be an array'),
+      body('availabilityHours').optional().isObject().withMessage('Availability hours must be an object'),
+      body('responseRate')
+        .optional()
+        .isFloat({ min: 0, max: 100 })
+        .withMessage('Response rate must be between 0 and 100'),
+      body('responseTimeMinutes')
+        .optional()
+        .isInt({ min: 0 })
+        .withMessage('Response time minutes must be a non-negative integer'),
+      body('website').optional().isURL().withMessage('Website must be a valid URL'),
+      body('socialLinks').optional().isObject().withMessage('Social links must be an object'),
+      body('preferredContactMethod')
+        .optional()
+        .isIn(['phone', 'email', 'whatsapp', 'sms'])
+        .withMessage('Preferred contact method is invalid'),
+      body('isFeatured').optional().isBoolean().withMessage('isFeatured must be a boolean'),
+      body('featuredUntil').optional().isISO8601().withMessage('featuredUntil must be a valid date'),
     ]),
     async (req: AuthRequest, res: Response) => {
       try {
@@ -206,6 +268,17 @@ export class ProviderController {
           latitude,
           longitude,
           address,
+          bio,
+          certifications,
+          languages,
+          availabilityHours,
+          responseRate,
+          responseTimeMinutes,
+          website,
+          socialLinks,
+          preferredContactMethod,
+          isFeatured,
+          featuredUntil,
         } = req.body;
 
         if (uploadedPhoto) {
@@ -236,6 +309,17 @@ export class ProviderController {
             latitude,
             longitude,
             address,
+            bio,
+            certifications,
+            languages,
+            availabilityHours,
+            responseRate,
+            responseTimeMinutes,
+            website,
+            socialLinks,
+            preferredContactMethod,
+            isFeatured,
+            featuredUntil: featuredUntil ? new Date(featuredUntil) : undefined,
           });
 
           return res.json({
@@ -254,6 +338,17 @@ export class ProviderController {
           latitude,
           longitude,
           address,
+          bio,
+          certifications,
+          languages,
+          availabilityHours,
+          responseRate,
+          responseTimeMinutes,
+          website,
+          socialLinks,
+          preferredContactMethod,
+          isFeatured,
+          featuredUntil: featuredUntil ? new Date(featuredUntil) : undefined,
         });
 
         return res.json({
