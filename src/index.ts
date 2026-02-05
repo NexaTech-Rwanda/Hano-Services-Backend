@@ -81,12 +81,13 @@ app.get('/health', async (_req: Request, res: Response) => {
 
 // API routes
 import authRoutes from './routes/auth.routes';
-import categoryRoutes from './routes/categories.routes';
-import providerRoutes from './routes/provider.routes';
+import categoriesRoutes from './routes/categories.routes';
+import providersRoutes from './routes/provider.routes';
 import adminRoutes from './routes/admin.routes';
-import reviewRoutes from './routes/review.routes';
+import reviewsRoutes from './routes/review.routes';
 import paymentRoutes from './routes/payment.routes';
 import userRoutes from './routes/user.routes';
+import jobRoutes from './routes/job.routes';
 
 /**
  * @swagger
@@ -123,12 +124,13 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 }));
 
 app.use('/api/auth', authRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/providers', providerRoutes);
+app.use('/api/categories', categoriesRoutes);
+app.use('/api/providers', providersRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/reviews', reviewRoutes);
+app.use('/api/reviews', reviewsRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/jobs', jobRoutes);
 
 // Error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
