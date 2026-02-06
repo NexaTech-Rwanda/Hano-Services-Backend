@@ -60,7 +60,9 @@ app.use(express.urlencoded({ extended: true }));
  *                   example: "error"
  *                 message:
  *                   type: string
- *                   example: "Database connection failed"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
  */
 // Health check endpoint
 app.get('/health', async (_req: Request, res: Response) => {
@@ -75,19 +77,10 @@ app.get('/health', async (_req: Request, res: Response) => {
     return res.status(503).json({
       status: 'error',
       message: 'Database connection failed',
+      timestamp: new Date().toISOString(),
     });
   }
 });
-
-// API routes
-import authRoutes from './routes/auth.routes';
-import categoriesRoutes from './routes/categories.routes';
-import providersRoutes from './routes/provider.routes';
-import adminRoutes from './routes/admin.routes';
-import reviewsRoutes from './routes/review.routes';
-import paymentRoutes from './routes/payment.routes';
-import userRoutes from './routes/user.routes';
-import jobRoutes from './routes/job.routes';
 
 /**
  * @swagger
@@ -123,6 +116,17 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customSiteTitle: 'HanoServices API Documentation',
 }));
 
+// Import routes
+import authRoutes from './routes/auth.routes';
+import categoriesRoutes from './routes/categories.routes';
+import providersRoutes from './routes/provider.routes';
+import adminRoutes from './routes/admin.routes';
+import reviewsRoutes from './routes/review.routes';
+import paymentRoutes from './routes/payment.routes';
+import userRoutes from './routes/user.routes';
+import jobRoutes from './routes/job.routes';
+import bookingRoutes from './routes/booking.routes';
+
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoriesRoutes);
 app.use('/api/providers', providersRoutes);
@@ -131,6 +135,7 @@ app.use('/api/reviews', reviewsRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/jobs', jobRoutes);
+app.use('/api/bookings', bookingRoutes);
 
 // Error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

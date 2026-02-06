@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS provider_portfolios (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Bookings table
+-- Bookings table (enhanced for appointments)
 CREATE TABLE IF NOT EXISTS bookings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     customer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     longitude DECIMAL(11, 8),
     geo_location geography(Point, 4326),
     address TEXT,
+    notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -184,6 +185,7 @@ CREATE INDEX IF NOT EXISTS idx_providers_response_rate ON providers(response_rat
 CREATE INDEX IF NOT EXISTS idx_providers_preferred_contact ON providers(preferred_contact_method);
 CREATE INDEX IF NOT EXISTS idx_providers_languages ON providers USING GIN (languages);
 CREATE INDEX IF NOT EXISTS idx_providers_certifications ON providers USING GIN (certifications);
+CREATE INDEX IF NOT EXISTS idx_bookings_scheduled_date ON bookings(scheduled_date) WHERE scheduled_date IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_bookings_customer ON bookings(customer_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_provider ON bookings(provider_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);

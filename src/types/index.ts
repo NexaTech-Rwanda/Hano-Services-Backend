@@ -90,6 +90,7 @@ export interface Booking {
     longitude: number;
     address?: string;
   };
+  notes?: string;
   createdAt: Date;
   updatedAt: Date;
 }
