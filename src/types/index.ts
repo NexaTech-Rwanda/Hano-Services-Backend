@@ -91,6 +91,7 @@ export interface Booking {
     address?: string;
   };
   notes?: string;
+  imageUrl?: string;
   createdAt: Date;
   updatedAt: Date;
 }

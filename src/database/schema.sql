@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS bookings (
     geo_location geography(Point, 4326),
     address TEXT,
     notes TEXT,
+    image_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

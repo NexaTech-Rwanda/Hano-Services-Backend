@@ -11,7 +11,7 @@ const router = Router();
  *       type: object
  *       required:
  *         - customerId
- *         - serviceCategoryId
+ *         - serviceCategoryIdx
  *         - title
  *         - description
  *         - budget

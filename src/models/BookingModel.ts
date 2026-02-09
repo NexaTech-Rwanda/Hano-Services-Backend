@@ -16,14 +16,15 @@ export class BookingModel {
       longitude?: number;
       address?: string;
       notes?: string;
+      imageUrl?: string;
     }
   ): Promise<Booking> {
     const result = await pool.query(
       `INSERT INTO bookings (
         customer_id, provider_id, service_category_id,
-        scheduled_date, description, latitude, longitude, address, notes
+        scheduled_date, description, latitude, longitude, address, notes, image_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING *`,
       [
         customerId,
@@ -35,6 +36,7 @@ export class BookingModel {
         data.longitude || null,
         data.address || null,
         data.notes || null,
+        data.imageUrl || null,
       ]
     );
 
@@ -62,6 +64,7 @@ export class BookingModel {
       longitude?: number;
       address?: string;
       notes?: string;
+      imageUrl?: string;
     }
   ): Promise<Booking | null> {
     const updates: string[] = [];
@@ -95,6 +98,10 @@ export class BookingModel {
     if (data.notes !== undefined) {
       updates.push(`notes = $${paramCount++}`);
       values.push(data.notes);
+    }
+    if (data.imageUrl !== undefined) {
+      updates.push(`image_url = $${paramCount++}`);
+      values.push(data.imageUrl);
     }
 
     if (updates.length === 0) {
@@ -207,6 +214,7 @@ export class BookingModel {
             }
           : undefined,
       notes: row.notes,
+      imageUrl: row.image_url,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

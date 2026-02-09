@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import { BookingModel } from '../models/BookingModel';
+import { BookingService } from '../services/booking.service';
 import { WhatsappService } from '../services/whatsapp.service';
 import { authenticate, authorize } from '../middleware/auth';
 import { AuthRequest } from '../middleware/auth';
@@ -44,15 +45,16 @@ export class BookingController {
       try {
         const userId = req.userId!;
         const { providerId, serviceCategoryId, scheduledDate, description, latitude, longitude, address, notes } = req.body;
+        const imageFile = req.file;
 
-        const booking = await BookingModel.create(userId, providerId, serviceCategoryId, {
+        const booking = await BookingService.createBooking(userId, providerId, serviceCategoryId, {
           scheduledDate: scheduledDate ? new Date(scheduledDate) : undefined,
           description,
           latitude,
           longitude,
           address,
           notes,
-        });
+        }, imageFile);
 
         return res.status(201).json({
           status: 'success',

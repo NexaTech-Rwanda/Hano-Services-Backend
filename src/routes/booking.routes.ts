@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { BookingController } from '../controllers/booking.controller';
+import { upload } from '../middleware/upload';
 
 const router = Router();
 
@@ -50,9 +51,10 @@ const router = Router();
  *               notes:
  *                 type: string
  *                 example: "Please bring necessary tools"
- *               chatEnabled:
- *                 type: boolean
- *                 example: true
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: "Optional booking image (JPEG, JPG, PNG)"
  *         application/json:
  *           schema:
  *             type: object
@@ -81,8 +83,6 @@ const router = Router();
  *                 type: string
  *               notes:
  *                 type: string
- *               chatEnabled:
- *                 type: boolean
  *     responses:
  *       201:
  *         description: Booking created successfully
@@ -103,7 +103,7 @@ const router = Router();
  *       403:
  *         description: Forbidden (not a customer)
  */
-router.post('/', ...BookingController.create);
+router.post('/', upload.single('image'), ...BookingController.create);
 
 /**
  * @swagger
