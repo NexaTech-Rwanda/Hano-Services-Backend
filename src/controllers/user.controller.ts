@@ -88,11 +88,20 @@ export class UserController {
     validate([
       body('currentPassword').notEmpty().withMessage('Current password is required'),
       body('newPassword').isLength({ min: 6 }).withMessage('New password must be at least 6 characters'),
+      body('confirmPassword').notEmpty().withMessage('Password confirmation is required'),
     ]),
     async (req: AuthRequest, res: Response) => {
       try {
         const userId = req.userId!;
-        const { currentPassword, newPassword } = req.body;
+        const { currentPassword, newPassword, confirmPassword } = req.body;
+
+        // Validate passwords match
+        if (newPassword !== confirmPassword) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'New password and confirmation do not match',
+          });
+        }
 
         const user = await UserModel.findById(userId);
         if (!user || !user.password) {
