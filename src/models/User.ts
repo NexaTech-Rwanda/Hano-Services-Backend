@@ -78,14 +78,75 @@ export class UserModel {
   }
 
   /**
-   * Update password
+   * Update user profile
    */
-  static async updatePassword(id: string, password: string): Promise<void> {
-    const hashedPassword = await hashPassword(password);
-    await pool.query('UPDATE users SET password = $1 WHERE id = $2', [
+  static async updateProfile(
+    id: string,
+    data: {
+      username?: string;
+      email?: string;
+      phone?: string;
+      photo?: string;
+    }
+  ): Promise<User | null> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    if (data.username !== undefined) {
+      updates.push(`username = $${paramCount++}`);
+      values.push(data.username);
+    }
+    if (data.email !== undefined) {
+      updates.push(`email = $${paramCount++}`);
+      values.push(data.email);
+    }
+    if (data.phone !== undefined) {
+      updates.push(`phone = $${paramCount++}`);
+      values.push(data.phone);
+    }
+    if (data.photo !== undefined) {
+      updates.push(`photo = $${paramCount++}`);
+      values.push(data.photo);
+    }
+
+    if (updates.length === 0) {
+      return this.findById(id);
+    }
+
+    values.push(id);
+    const result = await pool.query(
+      `UPDATE users
+       SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $${paramCount}
+       RETURNING *`,
+      values
+    );
+
+    return result.rows.length ? this.mapRowToUser(result.rows[0]) : null;
+  }
+
+  /**
+   * Update user password
+   */
+  static async updatePassword(id: string, newPassword: string): Promise<void> {
+    const hashedPassword = await hashPassword(newPassword);
+    await pool.query('UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [
       hashedPassword,
       id,
     ]);
+  }
+
+  /**
+   * Update preferred contact method
+   */
+  static async updatePreferredContactMethod(id: string, preferredContactMethod: string): Promise<User | null> {
+    const result = await pool.query(
+      'UPDATE users SET preferred_contact_method = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+      [preferredContactMethod, id]
+    );
+
+    return result.rows.length ? this.mapRowToUser(result.rows[0]) : null;
   }
 
   /**
@@ -110,6 +171,8 @@ export class UserModel {
       password: row.password,
       role: row.role as UserRole,
       isPhoneVerified: row.is_phone_verified,
+      photo: row.photo,
+      preferredContactMethod: row.preferred_contact_method,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

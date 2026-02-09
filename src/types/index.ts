@@ -32,6 +32,8 @@ export interface User {
   password?: string;
   role: UserRole;
   isPhoneVerified: boolean;
+  photo?: string;
+  preferredContactMethod?: 'phone' | 'email' | 'whatsapp' | 'sms';
   createdAt: Date;
   updatedAt: Date;
 }

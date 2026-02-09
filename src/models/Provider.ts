@@ -97,8 +97,94 @@ export class ProviderModel {
   }
 
   /**
-   * Find provider by user ID
+   * Update provider profile
    */
+  static async updateProfile(
+    userId: string,
+    data: {
+      name?: string;
+      bio?: string;
+      priceRangeMin?: number;
+      priceRangeMax?: number;
+      yearsOfExperience?: number;
+      certifications?: string[];
+      languages?: string[];
+      availability?: ProviderAvailability;
+      location?: {
+        latitude: number;
+        longitude: number;
+        address?: string;
+      };
+    }
+  ): Promise<Provider | null> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    if (data.name !== undefined) {
+      updates.push(`name = $${paramCount++}`);
+      values.push(data.name);
+    }
+    if (data.bio !== undefined) {
+      updates.push(`bio = $${paramCount++}`);
+      values.push(data.bio);
+    }
+    if (data.priceRangeMin !== undefined) {
+      updates.push(`price_range_min = $${paramCount++}`);
+      values.push(data.priceRangeMin);
+    }
+    if (data.priceRangeMax !== undefined) {
+      updates.push(`price_range_max = $${paramCount++}`);
+      values.push(data.priceRangeMax);
+    }
+    if (data.yearsOfExperience !== undefined) {
+      updates.push(`years_of_experience = $${paramCount++}`);
+      values.push(data.yearsOfExperience);
+    }
+    if (data.certifications !== undefined) {
+      updates.push(`certifications = $${paramCount++}`);
+      values.push(data.certifications);
+    }
+    if (data.languages !== undefined) {
+      updates.push(`languages = $${paramCount++}`);
+      values.push(data.languages);
+    }
+    if (data.location !== undefined) {
+      updates.push(`latitude = $${paramCount++}`);
+      values.push(data.location.latitude);
+      updates.push(`longitude = $${paramCount++}`);
+      values.push(data.location.longitude);
+      updates.push(`address = $${paramCount++}`);
+      values.push(data.location.address || null);
+    }
+
+    if (updates.length === 0) {
+      return this.findByUserId(userId);
+    }
+
+    values.push(userId);
+    const result = await pool.query(
+      `UPDATE providers
+       SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
+       WHERE user_id = $${paramCount}
+       RETURNING *`,
+      values
+    );
+
+    return result.rows.length ? this.mapRowToProvider(result.rows[0]) : null;
+  }
+
+  /**
+   * Update provider photo
+   */
+  static async updatePhoto(userId: string, photoUrl: string): Promise<Provider | null> {
+    const result = await pool.query(
+      'UPDATE providers SET photo = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2 RETURNING *',
+      [photoUrl, userId]
+    );
+
+    return result.rows.length ? this.mapRowToProvider(result.rows[0]) : null;
+  }
   static async findByUserId(userId: string): Promise<Provider | null> {
     const result = await pool.query(
       'SELECT * FROM providers WHERE user_id = $1',
