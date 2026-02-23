@@ -204,6 +204,43 @@ CREATE INDEX IF NOT EXISTS idx_jobs_service_category ON jobs(service_category_id
 CREATE INDEX IF NOT EXISTS idx_jobs_geo_location ON jobs USING GIST (geo_location);
 CREATE INDEX IF NOT EXISTS idx_jobs_deadline ON jobs(deadline) WHERE deadline IS NOT NULL;
 
+-- Payments table
+CREATE TABLE IF NOT EXISTS payments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    reference VARCHAR(255) UNIQUE NOT NULL,
+    customer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    provider_id UUID REFERENCES providers(id) ON DELETE SET NULL,
+    booking_id UUID REFERENCES bookings(id) ON DELETE SET NULL,
+    job_id UUID REFERENCES jobs(id) ON DELETE SET NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    currency VARCHAR(10) NOT NULL DEFAULT 'RWF',
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'successful', 'failed')),
+    metadata JSONB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_reference ON payments(reference);
+CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+
+-- Job Bids table
+CREATE TABLE IF NOT EXISTS job_bids (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
+    provider_id UUID NOT NULL REFERENCES providers(id) ON DELETE CASCADE,
+    bid_amount DECIMAL(10, 2) NOT NULL,
+    proposal_text TEXT,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'withdrawn')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (job_id, provider_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_job_bids_job ON job_bids(job_id);
+CREATE INDEX IF NOT EXISTS idx_job_bids_provider ON job_bids(provider_id);
+CREATE INDEX IF NOT EXISTS idx_job_bids_status ON job_bids(status);
+
 -- Functions to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -311,3 +348,11 @@ DROP TRIGGER IF EXISTS trg_sync_jobs_geo_location ON jobs;
 CREATE TRIGGER trg_sync_jobs_geo_location
     BEFORE INSERT OR UPDATE OF latitude, longitude ON jobs
     FOR EACH ROW EXECUTE FUNCTION sync_jobs_geo_location();
+
+DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
+CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_job_bids_updated_at ON job_bids;
+CREATE TRIGGER update_job_bids_updated_at BEFORE UPDATE ON job_bids
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
