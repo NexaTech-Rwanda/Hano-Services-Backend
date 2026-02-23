@@ -6,10 +6,12 @@
 import { Response, Request } from 'express';
 import { PaymentController } from '../../controllers/payment.controller';
 import { PaymentService } from '../../services/payment.service';
+import { PaymentModel } from '../../models/Payment';
 import { AuthRequest } from '../../middleware/auth';
 import { UserRole } from '../../types';
 
 jest.mock('../../services/payment.service');
+jest.mock('../../models/Payment');
 jest.mock('../../config/config', () => ({
   config: {
     jwt: { secret: 'test-secret', expiresIn: '1h', refreshExpiresInDays: 30 },
@@ -155,15 +157,13 @@ describe('PaymentController', () => {
   describe('flutterwaveCallback', () => {
     it('should return 200 for valid webhook', async () => {
       (PaymentService.verifyWebhookSignature as jest.Mock).mockReturnValue(true);
-      (PaymentService.handleFlutterwaveCallback as jest.Mock).mockResolvedValue({
-        status: 'completed',
-      });
+      (PaymentModel.updateStatus as jest.Mock).mockResolvedValue(true);
 
       const { req, res } = createMockAuthReqRes({
         headers: { 'verif-hash': 'valid-hash' },
         body: {
-          event: 'charge.completed',
-          data: { id: 'flw-123', status: 'successful' },
+          type: 'charge.completed',
+          data: { reference: 'ref-1', id: 'flw-123', status: 'successful' },
         },
       });
 
@@ -171,6 +171,7 @@ describe('PaymentController', () => {
       await handler(req, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
+      expect(PaymentModel.updateStatus).toHaveBeenCalledWith('ref-1', 'successful', expect.any(Object));
     });
 
     it('should return 401 for invalid webhook signature', async () => {
@@ -229,28 +230,33 @@ describe('PaymentController', () => {
   // ─── Get Payment Status ──────────────────────────────────────────
   describe('getPaymentStatus', () => {
     it('should return 200 with payment status', async () => {
-      (PaymentService.getPaymentStatus as jest.Mock).mockResolvedValue({
-        status: 'completed',
+      (PaymentModel.findByReference as jest.Mock).mockResolvedValue({
+        reference: 'ref-1',
+        status: 'successful',
         amount: 5000,
       });
 
       const { req, res } = createMockAuthReqRes({
-        params: { id: 'payment-uuid-1' },
+        params: { reference: 'ref-1' },
       });
 
       const handler = getHandler(PaymentController.getPaymentStatus);
       await handler(req, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'success',
+          data: expect.objectContaining({ status: 'successful' }),
+        })
+      );
     });
 
     it('should return 404 when payment not found', async () => {
-      (PaymentService.getPaymentStatus as jest.Mock).mockRejectedValue(
-        new Error('Payment not found')
-      );
+      (PaymentModel.findByReference as jest.Mock).mockResolvedValue(null);
 
       const { req, res } = createMockAuthReqRes({
-        params: { id: 'nonexistent' },
+        params: { reference: 'nonexistent' },
       });
 
       const handler = getHandler(PaymentController.getPaymentStatus);
