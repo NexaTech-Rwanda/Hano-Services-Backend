@@ -7,6 +7,32 @@ const router = Router();
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     Payment:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         reference:
+ *           type: string
+ *         customerId:
+ *           type: string
+ *         amount:
+ *           type: number
+ *         status:
+ *           type: string
+ *           enum: [pending, successful, failed]
+ *         currency:
+ *           type: string
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ */
+
+/**
+ * @swagger
  * /api/payments/initiate:
  *   post:
  *     summary: Initiate a payment
@@ -42,6 +68,17 @@ const router = Router();
  *     responses:
  *       201:
  *         description: Payment initiated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Bad request
  */
 router.post(
   '/initiate',
@@ -120,7 +157,18 @@ router.post('/airtel/callback', PaymentController.airtelCallback);
  *           type: string
  *     responses:
  *       200:
- *         description: Payment status
+ *         description: Payment status retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 data:
+ *                   $ref: '#/components/schemas/Payment'
+ *       404:
+ *         description: Payment not found
  */
 router.get('/:reference/status', PaymentController.getPaymentStatus);
 

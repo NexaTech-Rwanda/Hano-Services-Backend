@@ -79,6 +79,28 @@ const router = Router();
  *           type: string
  *           format: date-time
  *           description: When the job was last updated
+ *     JobBid:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: string
+ *           format: uuid
+ *         jobId:
+ *           type: string
+ *           format: uuid
+ *         providerId:
+ *           type: string
+ *           format: uuid
+ *         bidAmount:
+ *           type: number
+ *         proposalText:
+ *           type: string
+ *         status:
+ *           type: string
+ *           enum: [pending, accepted, rejected]
+ *         createdAt:
+ *           type: string
+ *           format: date-time
  */
 
 /**
