@@ -126,6 +126,7 @@ import paymentRoutes from './routes/payment.routes';
 import userRoutes from './routes/user.routes';
 import jobRoutes from './routes/job.routes';
 import bookingRoutes from './routes/booking.routes';
+import { ReminderService } from './services/reminder.service';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoriesRoutes);
@@ -136,6 +137,9 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/bookings', bookingRoutes);
+
+// Initialize background services
+ReminderService.init();
 
 // Error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

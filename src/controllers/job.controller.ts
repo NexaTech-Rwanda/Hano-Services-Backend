@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { body, query, validationResult } from 'express-validator';
 import { JobModel, JobStatus } from '../models/Job';
+import { JobService } from '../services/job.service';
 import { authenticate, authorize } from '../middleware/auth';
 import { AuthRequest } from '../middleware/auth';
 import { UserRole } from '../types';
@@ -52,7 +53,7 @@ export class JobController {
           deadline,
         } = req.body;
 
-        const job = await JobModel.create({
+        const job = await JobService.createJob({
           customerId: userId,
           serviceCategoryId,
           title,
@@ -212,11 +213,7 @@ export class JobController {
         }
 
         // In a real app, you'd look up provider record from user ID; for simplicity, assume userId maps to provider.id
-        const updated = await JobModel.update(jobId, {
-          status: 'assigned',
-          assignedProviderId: providerId,
-          assignedAt: new Date(),
-        });
+        const updated = await JobService.assignJob(jobId, providerId);
 
         return res.json({
           status: 'success',
@@ -269,12 +266,7 @@ export class JobController {
           });
         }
 
-        const updateData: any = { status };
-        if (status === 'completed') {
-          updateData.completedAt = new Date();
-        }
-
-        const updated = await JobModel.update(jobId, updateData);
+        const updated = await JobService.updateStatus(jobId, status, userId);
 
         return res.json({
           status: 'success',

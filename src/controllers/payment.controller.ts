@@ -65,6 +65,16 @@ export class PaymentController {
         callbackUrl: req.body.callbackUrl, // Optional custom callback URL
       });
 
+      // Record payment in database
+      await PaymentModel.create({
+        reference: (paymentResponse as any).txRef || (paymentResponse as any).reference || 'PENDING-' + Date.now(),
+        customerId,
+        providerId,
+        amount,
+        currency,
+        metadata: { channel, phoneNumber, description },
+      }).catch(err => console.error('[PaymentController] DB Error recording initiation:', err));
+
       return res.status(201).json({
         message: 'Payment initiated successfully',
         data: paymentResponse,
@@ -117,33 +127,27 @@ export class PaymentController {
       switch (eventType) {
         case 'charge.completed':
           // Payment was successful
-          // TODO: Update your database with payment status
-          // Example:
-          // await PaymentModel.updateStatus(reference, 'successful', {
-          //   chargeId,
-          //   amount,
-          //   currency,
-          //   customer,
-          //   meta,
-          //   payment_method,
-          //   processor_response,
-          //   completedAt: new Date(),
-          // });
+          await PaymentModel.updateStatus(reference, 'successful', {
+            chargeId: data.id,
+            flw_ref: data.flw_ref,
+            amount: data.amount,
+            currency: data.currency,
+            customer: data.customer,
+            payment_type: data.payment_type,
+            completedAt: new Date(),
+          });
           console.log(`[PaymentController] Payment successful: ${reference}`);
           break;
 
         case 'charge.failed':
           // Payment failed
-          // TODO: Update your database with payment status
-          // await PaymentModel.updateStatus(reference, 'failed', {
-          //   chargeId,
-          //   amount,
-          //   currency,
-          //   customer,
-          //   meta,
-          //   processor_response,
-          //   failedAt: new Date(),
-          // });
+          await PaymentModel.updateStatus(reference, 'failed', {
+            chargeId: data.id,
+            flw_ref: data.flw_ref,
+            amount: data.amount,
+            currency: data.currency,
+            failedAt: new Date(),
+          });
           console.log(`[PaymentController] Payment failed: ${reference}`);
           break;
 
@@ -197,18 +201,14 @@ export class PaymentController {
     try {
       const { reference } = req.params;
 
-      // TODO: Fetch payment status from database
-      // const payment = await PaymentModel.findByReference(reference);
-      // if (!payment) {
-      //   return res.status(404).json({ error: 'Payment not found' });
-      // }
+      const payment = await PaymentModel.findByReference(reference);
+      if (!payment) {
+        return res.status(404).json({ error: 'Payment not found' });
+      }
 
-      // For now, return placeholder
       return res.status(200).json({
-        message: 'Payment status endpoint - implement database lookup',
-        reference,
-        // status: payment.status,
-        // data: payment,
+        status: 'success',
+        data: payment,
       });
     } catch (error: any) {
       console.error('[PaymentController] Error getting payment status:', error);

@@ -1,4 +1,4 @@
-import { JobModel, Job } from '../models/Job';
+import { JobModel, Job, JobStatus } from '../models/Job';
 import { PushNotificationService } from './push-notification.service';
 import pool from '../config/database';
 
@@ -46,7 +46,7 @@ export class JobService {
   /**
    * Update job status and notify parties
    */
-  static async updateStatus(jobId: string, status: string, userId: string): Promise<Job | null> {
+  static async updateStatus(jobId: string, status: JobStatus, userId: string): Promise<Job | null> {
     const job = await JobModel.findById(jobId);
     if (!job) return null;
 

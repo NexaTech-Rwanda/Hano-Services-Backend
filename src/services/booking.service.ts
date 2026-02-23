@@ -2,6 +2,7 @@ import { BookingModel } from '../models/BookingModel';
 import { BookingStatus, UserRole } from '../types';
 import { ProviderModel } from '../models/Provider';
 import { StorageService } from './storage.service';
+import { PushNotificationService } from './push-notification.service';
 
 export class BookingService {
   /**
@@ -54,10 +55,19 @@ export class BookingService {
     }
 
     // Create booking with image URL
-    return BookingModel.create(customerId, providerId, serviceCategoryId, {
+    const booking = await BookingModel.create(customerId, providerId, serviceCategoryId, {
       ...data,
       imageUrl,
     });
+
+    // Notify provider
+    PushNotificationService.sendToUser(provider.userId, {
+      title: 'New Booking Request',
+      body: `You have a new booking request from a customer.`,
+      data: { bookingId: booking.id, type: 'new_booking' }
+    }).catch(err => console.error('[BookingService] Notification error:', err));
+
+    return booking;
   }
 
   /**
@@ -189,7 +199,19 @@ export class BookingService {
       throw new Error('Cannot change a completed or cancelled booking');
     }
 
-    return BookingModel.update(bookingId, { status });
+    const updatedBooking = await BookingModel.update(bookingId, { status });
+
+    if (updatedBooking) {
+      // Notify customer
+      const statusTitle = status.charAt(0).toUpperCase() + status.slice(1);
+      PushNotificationService.sendToUser(booking.customerId, {
+        title: `Booking ${statusTitle}`,
+        body: `Your booking has been ${status}.`,
+        data: { bookingId, status, type: 'booking_update' }
+      }).catch(err => console.error('[BookingService] Notification error:', err));
+    }
+
+    return updatedBooking;
   }
 }
 

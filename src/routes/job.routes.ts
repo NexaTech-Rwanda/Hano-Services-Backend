@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { JobController } from '../controllers/job.controller';
+import { JobBidController } from '../controllers/job-bid.controller';
 
 const router = Router();
 
@@ -480,5 +481,82 @@ router.patch('/:id/assign', JobController.assignToProvider);
  *         description: Job not found
  */
 router.patch('/:id/status', ...JobController.updateStatus);
+
+/**
+ * @swagger
+ * /api/jobs/{id}/bids:
+ *   post:
+ *     summary: Place a bid on a job (provider only)
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - bidAmount
+ *             properties:
+ *               bidAmount:
+ *                 type: number
+ *               proposalText:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Bid placed successfully
+ *   get:
+ *     summary: List bids for a job (customer only)
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: List of bids
+ */
+router.post('/:id/bids', JobBidController.placeBid);
+router.get('/:id/bids', JobBidController.listBids);
+
+/**
+ * @swagger
+ * /api/jobs/{id}/bids/{bidId}/accept:
+ *   patch:
+ *     summary: Accept a bid for a job (customer only)
+ *     tags: [Jobs]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *       - in: path
+ *         name: bidId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Bid accepted and job assigned
+ */
+router.patch('/:id/bids/:bidId/accept', JobBidController.acceptBid);
 
 export default router;
