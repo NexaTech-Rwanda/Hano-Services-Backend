@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { JobBidModel } from '../models/JobBid';
 import { JobModel } from '../models/Job';
 import { PushNotificationService } from '../services/push-notification.service';
+import { logError } from '../utils/logger';
 
 export class JobBidController {
   /**
@@ -15,19 +16,23 @@ export class JobBidController {
       const providerId = (req as any).user?.providerId; // Assuming providerId is attached during auth
 
       if (!providerId) {
+        logError('Only providers can place bids', 'JobBidController.placeBid');
         return res.status(403).json({ error: 'Only providers can place bids' });
       }
 
       if (!bidAmount) {
+        logError('Bid amount is required', 'JobBidController.placeBid');
         return res.status(400).json({ error: 'Bid amount is required' });
       }
 
       const job = await JobModel.findById(jobId);
       if (!job) {
+        logError('Job not found', 'JobBidController.placeBid');
         return res.status(404).json({ error: 'Job not found' });
       }
 
       if (job.status !== 'open') {
+        logError('Job is no longer open for bids', 'JobBidController.placeBid');
         return res.status(400).json({ error: 'Job is no longer open for bids' });
       }
 
@@ -50,7 +55,7 @@ export class JobBidController {
         data: bid,
       });
     } catch (error: any) {
-      console.error('[JobBidController] Error placing bid:', error);
+      logError(error.message, 'JobBidController.placeBid');
       if (error.code === '23505') { // Unique violation
         return res.status(400).json({ error: 'You have already placed a bid on this job' });
       }
@@ -71,10 +76,12 @@ export class JobBidController {
 
       const job = await JobModel.findById(jobId);
       if (!job) {
+        logError('Job not found', 'JobBidController.listBids');
         return res.status(404).json({ error: 'Job not found' });
       }
 
       if (job.customerId !== userId) {
+        logError('Unauthorized to view bids for this job', 'JobBidController.listBids');
         return res.status(403).json({ error: 'Unauthorized to view bids for this job' });
       }
 
@@ -84,7 +91,7 @@ export class JobBidController {
         data: bids,
       });
     } catch (error: any) {
-      console.error('[JobBidController] Error listing bids:', error);
+      logError(error.message, 'JobBidController.listBids');
       return res.status(500).json({
         error: error.message || 'Failed to list bids',
       });
@@ -102,15 +109,18 @@ export class JobBidController {
 
       const job = await JobModel.findById(jobId);
       if (!job) {
+        logError('Job not found', 'JobBidController.acceptBid');
         return res.status(404).json({ error: 'Job not found' });
       }
 
       if (job.customerId !== userId) {
+        logError('Unauthorized', 'JobBidController.acceptBid');
         return res.status(403).json({ error: 'Unauthorized' });
       }
 
       const bid = await JobBidModel.findById(bidId);
       if (!bid || bid.jobId !== jobId) {
+        logError('Bid not found', 'JobBidController.acceptBid');
         return res.status(404).json({ error: 'Bid not found' });
       }
 
@@ -139,7 +149,7 @@ export class JobBidController {
         data: { jobId, bidId, providerId: bid.providerId },
       });
     } catch (error: any) {
-      console.error('[JobBidController] Error accepting bid:', error);
+      logError(error.message, 'JobBidController.acceptBid');
       return res.status(500).json({
         error: error.message || 'Failed to accept bid',
       });

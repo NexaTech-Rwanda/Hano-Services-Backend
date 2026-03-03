@@ -5,16 +5,18 @@ import { JobService } from '../services/job.service';
 import { authenticate, authorize } from '../middleware/auth';
 import { AuthRequest } from '../middleware/auth';
 import { UserRole } from '../types';
+import { logError } from '../utils/logger';
 
 const validate = (validations: any[]) => [
   ...validations,
   (req: Request, res: Response, next: any) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      logError(errors.array().join(', '), 'JobController.validation');
       return res.status(400).json({
         status: 'error',
         message: 'Validation failed',
-        errors: errors.array(),
+        errors: errors.array().join(', '),
       });
     }
     return next();
@@ -70,6 +72,7 @@ export class JobController {
           data: job,
         });
       } catch (error: any) {
+        logError(error.message, 'JobController.create');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -115,6 +118,7 @@ export class JobController {
           count: jobs.length,
         });
       } catch (error: any) {
+        logError(error.message, 'JobController.list');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -149,6 +153,7 @@ export class JobController {
           count: jobs.length,
         });
       } catch (error: any) {
+        logError(error.message, 'JobController.getMyJobs');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -178,6 +183,7 @@ export class JobController {
           data: job,
         });
       } catch (error: any) {
+        logError(error.message, 'JobController.getById');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -200,12 +206,14 @@ export class JobController {
 
         const job = await JobModel.findById(jobId);
         if (!job) {
+          logError('Job not found', 'JobController.assignToProvider');
           return res.status(404).json({
             status: 'error',
             message: 'Job not found',
           });
         }
         if (job.status !== 'open') {
+          logError('Job is not open for assignment', 'JobController.assignToProvider');
           return res.status(400).json({
             status: 'error',
             message: 'Job is not open for assignment',
@@ -220,6 +228,7 @@ export class JobController {
           data: updated,
         });
       } catch (error: any) {
+        logError(error.message, 'JobController.assignToProvider');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -246,6 +255,7 @@ export class JobController {
 
         const job = await JobModel.findById(jobId);
         if (!job) {
+          logError('Job not found', 'JobController.updateStatus');
           return res.status(404).json({
             status: 'error',
             message: 'Job not found',
@@ -254,12 +264,14 @@ export class JobController {
 
         // Authorization checks
         if (userRole === 'customer' && job.customerId !== userId) {
+          logError('You can only update your own jobs', 'JobController.updateStatus');
           return res.status(403).json({
             status: 'error',
             message: 'You can only update your own jobs',
           });
         }
         if (userRole === 'provider' && job.assignedProviderId !== userId) {
+          logError('You can only update jobs assigned to you', 'JobController.updateStatus');
           return res.status(403).json({
             status: 'error',
             message: 'You can only update jobs assigned to you',
@@ -273,6 +285,7 @@ export class JobController {
           data: updated,
         });
       } catch (error: any) {
+        logError(error.message, 'JobController.updateStatus');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -313,18 +326,21 @@ export class JobController {
 
         const job = await JobModel.findById(jobId);
         if (!job) {
+          logError('Job not found', 'JobController.update');
           return res.status(404).json({
             status: 'error',
             message: 'Job not found',
           });
         }
         if (job.customerId !== userId) {
+          logError('You can only update your own jobs', 'JobController.update');
           return res.status(403).json({
             status: 'error',
             message: 'You can only update your own jobs',
           });
         }
         if (job.status !== 'open') {
+          logError('You can only edit jobs that are still open', 'JobController.update');
           return res.status(400).json({
             status: 'error',
             message: 'You can only edit jobs that are still open',
@@ -346,6 +362,7 @@ export class JobController {
           data: updated,
         });
       } catch (error: any) {
+        logError(error.message, 'JobController.update');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -368,18 +385,21 @@ export class JobController {
 
         const job = await JobModel.findById(jobId);
         if (!job) {
+          logError('Job not found', 'JobController.delete');
           return res.status(404).json({
             status: 'error',
             message: 'Job not found',
           });
         }
         if (job.customerId !== userId) {
+          logError('You can only delete your own jobs', 'JobController.delete');
           return res.status(403).json({
             status: 'error',
             message: 'You can only delete your own jobs',
           });
         }
         if (job.status !== 'open') {
+          logError('You can only delete jobs that are still open', 'JobController.delete');
           return res.status(400).json({
             status: 'error',
             message: 'You can only delete jobs that are still open',
@@ -393,6 +413,7 @@ export class JobController {
           message: 'Job deleted successfully',
         });
       } catch (error: any) {
+        logError(error.message, 'JobController.delete');
         return res.status(400).json({
           status: 'error',
           message: error.message,

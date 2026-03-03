@@ -7,6 +7,7 @@ import { UserModel } from '../models/User';
 import { ProviderModel } from '../models/Provider';
 import { StorageService } from '../services/storage.service';
 import { UserRole } from '../types';
+import { logError } from '../utils/logger';
 
 export class UserController {
   /**
@@ -19,6 +20,7 @@ export class UserController {
       const user = await UserModel.findById(userId);
       
       if (!user) {
+        logError('User not found', 'UserController.getProfile');
         return res.status(404).json({
           status: 'error',
           message: 'User not found',
@@ -41,6 +43,7 @@ export class UserController {
         },
       });
     } catch (error: any) {
+      logError(error.message, 'UserController.getProfile');
       return res.status(500).json({
         status: 'error',
         message: error.message,
@@ -76,6 +79,7 @@ export class UserController {
           data: updatedUser,
         });
       } catch (error: any) {
+        logError(error.message, 'UserController.updateProfile');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -101,6 +105,7 @@ export class UserController {
 
         // Validate passwords match
         if (newPassword !== confirmPassword) {
+          logError('New password and confirmation do not match', 'UserController.changePassword');
           return res.status(400).json({
             status: 'error',
             message: 'New password and confirmation do not match',
@@ -109,6 +114,7 @@ export class UserController {
 
         const user = await UserModel.findById(userId);
         if (!user || !user.password) {
+          logError('User not found or no password set', 'UserController.changePassword');
           return res.status(400).json({
             status: 'error',
             message: 'User not found or no password set',
@@ -117,6 +123,7 @@ export class UserController {
 
         const isCurrentPasswordValid = await UserModel.verifyPassword(currentPassword, user.password);
         if (!isCurrentPasswordValid) {
+          logError('Current password is incorrect', 'UserController.changePassword');
           return res.status(400).json({
             status: 'error',
             message: 'Current password is incorrect',
@@ -132,6 +139,7 @@ export class UserController {
           message: 'Password updated successfully',
         });
       } catch (error: any) {
+        logError(error.message, 'UserController.changePassword');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -164,6 +172,7 @@ export class UserController {
           data: updatedUser,
         });
       } catch (error: any) {
+        logError(error.message, 'UserController.updateContactMethod');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -182,6 +191,7 @@ export class UserController {
       const imageFile = req.file;
 
       if (!imageFile) {
+        logError('No image file provided', 'UserController.uploadPhoto');
         return res.status(400).json({
           status: 'error',
           message: 'No image file provided',
@@ -190,6 +200,7 @@ export class UserController {
 
       const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png'];
       if (!allowedMimeTypes.includes(imageFile.mimetype)) {
+        logError('Only JPEG, JPG, and PNG images are allowed', 'UserController.uploadPhoto');
         return res.status(400).json({
           status: 'error',
           message: 'Only JPEG, JPG, and PNG images are allowed',
@@ -209,6 +220,7 @@ export class UserController {
       // Update user's photo URL based on role
       const user = await UserModel.findById(userId);
       if (!user) {
+        logError('User not found', 'UserController.uploadPhoto');
         return res.status(404).json({
           status: 'error',
           message: 'User not found',
@@ -228,6 +240,7 @@ export class UserController {
         data: { photoUrl: uploadResult.url },
       });
     } catch (error: any) {
+      logError(error.message, 'UserController.uploadPhoto');
       return res.status(400).json({
         status: 'error',
         message: error.message,
@@ -257,6 +270,7 @@ export class UserController {
         const user = await UserModel.findById(userId);
 
         if (!user || user.role !== UserRole.PROVIDER) {
+          logError('Only providers can update provider profile', 'UserController.updateProviderProfile');
           return res.status(403).json({
             status: 'error',
             message: 'Only providers can update provider profile',
@@ -294,6 +308,7 @@ export class UserController {
           data: updatedProvider,
         });
       } catch (error: any) {
+        logError(error.message, 'UserController.updateProviderProfile');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -319,6 +334,7 @@ export class UserController {
       try {
         const userId = req.userId;
         if (!userId) {
+          logError('Unauthorized', 'UserController.trackLocation');
           return res.status(401).json({
             status: 'error',
             message: 'Unauthorized',
@@ -339,6 +355,7 @@ export class UserController {
           data: location,
         });
       } catch (error: any) {
+        logError(error.message, 'UserController.trackLocation');
         return res.status(400).json({
           status: 'error',
           message: error.message,

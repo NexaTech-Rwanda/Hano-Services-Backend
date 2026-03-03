@@ -6,6 +6,7 @@ import { OTPModel } from '../models/OTP';
 import { UserRole } from '../types';
 import { SmsService } from './sms.service';
 import { RefreshTokenModel } from '../models/RefreshToken';
+import { logError } from '../utils/logger';
 
 export interface AuthTokens {
   accessToken: string;
@@ -57,37 +58,42 @@ export class AuthService {
     email?: string,
     password?: string
   ): Promise<AuthTokens> {
-    // Check if username already exists
-    const existingUserByUsername = await UserModel.findByUsername(username);
-    if (existingUserByUsername) {
-      throw new Error('Username already taken');
+    try {
+      // Check if username already exists
+      const existingUserByUsername = await UserModel.findByUsername(username);
+      if (existingUserByUsername) {
+        throw new Error('Username already taken');
+      }
+
+      // Check if phone number already exists
+      const existingUserByPhone = await UserModel.findByPhone(phone);
+      if (existingUserByPhone) {
+        throw new Error('User with this phone number already exists');
+      }
+
+      // Create user
+      const user = await UserModel.create(username, phone, role, email, password);
+
+      // Generate tokens
+      const accessToken = this.generateToken(user.id, user.role);
+      const refreshToken = await this.generateRefreshToken(user.id);
+
+      return {
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          phone: user.phone,
+          email: user.email,
+          role: user.role,
+          isPhoneVerified: user.isPhoneVerified,
+        },
+      };
+    } catch (error: any) {
+      logError(error.message, 'AuthService.register');
+      throw error;
     }
-
-    // Check if phone number already exists
-    const existingUserByPhone = await UserModel.findByPhone(phone);
-    if (existingUserByPhone) {
-      throw new Error('User with this phone number already exists');
-    }
-
-    // Create user
-    const user = await UserModel.create(username, phone, role, email, password);
-
-    // Generate tokens
-    const accessToken = this.generateToken(user.id, user.role);
-    const refreshToken = await this.generateRefreshToken(user.id);
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
-        username: user.username,
-        phone: user.phone,
-        email: user.email,
-        role: user.role,
-        isPhoneVerified: user.isPhoneVerified,
-      },
-    };
   }
 
   /**

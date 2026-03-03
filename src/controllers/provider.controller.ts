@@ -7,6 +7,7 @@ import { AuthRequest } from '../middleware/auth';
 import { ProviderService } from '../services/provider.service';
 import { ProviderAvailability } from '../types';
 import { StorageService } from '../services/storage.service';
+import { logError } from '../utils/logger';
 
 export class ProviderController {
   private static getFileExtension(file: Express.Multer.File): string {
@@ -128,6 +129,7 @@ export class ProviderController {
         let finalProvider = provider;
         if (uploadedPhoto) {
           if (!uploadedPhoto.mimetype?.toLowerCase().startsWith('image/')) {
+            logError('Uploaded photo must be an image', 'ProviderController.createProfile');
             return res.status(400).json({
               status: 'error',
               message: 'Uploaded photo must be an image',
@@ -155,6 +157,7 @@ export class ProviderController {
           data: finalProvider,
         });
       } catch (error: any) {
+        logError(error.message, 'ProviderController.createProfile');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -175,6 +178,7 @@ export class ProviderController {
         data: provider,
       });
     } catch (error: any) {
+      logError(error.message, 'ProviderController.getById');
       res.status(404).json({
         status: 'error',
         message: error.message,
@@ -195,6 +199,7 @@ export class ProviderController {
         data: provider,
       });
     } catch (error: any) {
+      logError(error.message, 'ProviderController.getMyProfile');
       res.status(404).json({
         status: 'error',
         message: error.message,
@@ -286,6 +291,7 @@ export class ProviderController {
         if (uploadedPhoto) {
           await ProviderService.updateProfile(providerId, userId, {});
           if (!uploadedPhoto.mimetype?.toLowerCase().startsWith('image/')) {
+            logError('Uploaded photo must be an image', 'ProviderController.updateProfile');
             return res.status(400).json({
               status: 'error',
               message: 'Uploaded photo must be an image',
@@ -360,6 +366,7 @@ export class ProviderController {
           data: provider,
         });
       } catch (error: any) {
+        logError(error.message, 'ProviderController.updateProfile');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -395,6 +402,7 @@ export class ProviderController {
           data: provider,
         });
       } catch (error: any) {
+        logError(error.message, 'ProviderController.updateAvailability');
         res.status(400).json({
           status: 'error',
           message: error.message,
@@ -500,6 +508,7 @@ export class ProviderController {
           count: providers.length,
         });
       } catch (error: any) {
+        logError(error.message, 'ProviderController.search');
         res.status(400).json({
           status: 'error',
           message: error.message,
@@ -528,6 +537,7 @@ export class ProviderController {
         const { imageUrl, description } = req.body;
 
         if (!uploadedImage && !imageUrl) {
+          logError('Either imageUrl or an image file is required', 'ProviderController.addPortfolioImage');
           return res.status(400).json({
             status: 'error',
             message: 'Either imageUrl or an image file is required',
@@ -537,6 +547,7 @@ export class ProviderController {
         // Verify provider ownership before uploading
         const myProvider = await ProviderService.getProfileByUserId(userId);
         if (!myProvider || myProvider.id !== providerId) {
+          logError('Unauthorized: You can only add to your own portfolio', 'ProviderController.addPortfolioImage');
           return res.status(403).json({
             status: 'error',
             message: 'Unauthorized: You can only add to your own portfolio',
@@ -546,6 +557,7 @@ export class ProviderController {
         let finalImageUrl = imageUrl;
         if (uploadedImage) {
           if (!uploadedImage.mimetype?.toLowerCase().startsWith('image/')) {
+            logError('Uploaded portfolio image must be an image', 'ProviderController.addPortfolioImage');
             return res.status(400).json({
               status: 'error',
               message: 'Uploaded portfolio image must be an image',
@@ -577,6 +589,7 @@ export class ProviderController {
           data: portfolio,
         });
       } catch (error: any) {
+        logError(error.message, 'ProviderController.addPortfolioImage');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -597,6 +610,7 @@ export class ProviderController {
         data: portfolio,
       });
     } catch (error: any) {
+      logError(error.message, 'ProviderController.getPortfolio');
       res.status(400).json({
         status: 'error',
         message: error.message,
@@ -621,6 +635,7 @@ export class ProviderController {
         message: 'Portfolio image deleted successfully',
       });
     } catch (error: any) {
+      logError(error.message, 'ProviderController.deletePortfolioImage');
       res.status(400).json({
         status: 'error',
         message: error.message,
@@ -669,6 +684,7 @@ export class ProviderController {
           message: 'Verification request submitted successfully',
         });
       } catch (error: any) {
+        logError(error.message, 'ProviderController.submitVerification');
         res.status(400).json({
           status: 'error',
           message: error.message,
@@ -692,6 +708,7 @@ export class ProviderController {
       );
 
       if (!request) {
+        logError('Verification request not found', 'ProviderController.getVerificationRequest');
         return res.status(404).json({
           status: 'error',
           message: 'Verification request not found',
@@ -705,6 +722,7 @@ export class ProviderController {
         data: request,
       });
     } catch (error: any) {
+      logError(error.message, 'ProviderController.getVerificationRequest');
       return res.status(400).json({
         status: 'error',
         message: error.message,

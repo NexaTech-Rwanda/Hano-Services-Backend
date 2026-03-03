@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PaymentService, PaymentChannel } from '../services/payment.service';
 import { PaymentModel } from '../models/Payment';
+import { logError } from '../utils/logger';
 
 export class PaymentController {
   /**
@@ -22,6 +23,7 @@ export class PaymentController {
 
       // Validate required fields
       if (!amount || !currency || !customerId || !channel) {
+        logError('Missing required fields: amount, currency, customerId, channel', 'PaymentController.initiatePayment');
         return res.status(400).json({
           error: 'Missing required fields: amount, currency, customerId, channel',
         });
@@ -29,6 +31,7 @@ export class PaymentController {
 
       // Validate channel
       if (!Object.values(PaymentChannel).includes(channel)) {
+        logError('Invalid payment channel', 'PaymentController.initiatePayment');
         return res.status(400).json({
           error: `Invalid payment channel. Must be one of: ${Object.values(PaymentChannel).join(', ')}`,
         });
@@ -41,6 +44,7 @@ export class PaymentController {
           channel === PaymentChannel.MOBILE_MONEY) &&
         !phoneNumber
       ) {
+        logError('Phone number is required for mobile money payments', 'PaymentController.initiatePayment');
         return res.status(400).json({
           error: 'phoneNumber is required for mobile money payments',
         });
@@ -48,6 +52,7 @@ export class PaymentController {
 
       // Validate email for Flutterwave (required for all payment types)
       if (!email) {
+        logError('Email is required for payments', 'PaymentController.initiatePayment');
         return res.status(400).json({
           error: 'email is required for payments',
         });
@@ -73,14 +78,14 @@ export class PaymentController {
         amount,
         currency,
         metadata: { channel, phoneNumber, description },
-      }).catch(err => console.error('[PaymentController] DB Error recording initiation:', err));
+      }).catch(err => logError(err.message, 'PaymentController.initiatePayment'));
 
       return res.status(201).json({
         message: 'Payment initiated successfully',
         data: paymentResponse,
       });
     } catch (error: any) {
-      console.error('[PaymentController] Error initiating payment:', error);
+      logError(error.message, 'PaymentController.initiatePayment');
       return res.status(500).json({
         error: error.message || 'Failed to initiate payment',
       });
@@ -103,14 +108,14 @@ export class PaymentController {
       // Verify webhook signature
       const isValid = PaymentService.verifyWebhookSignature(rawBody, signature);
       if (!isValid) {
-        console.warn('[PaymentController] Invalid Flutterwave webhook signature');
+        logError('Invalid Flutterwave webhook signature', 'PaymentController.flutterwaveCallback');
         return res.status(401).json({
           error: 'Invalid signature',
         });
       }
 
       const event = req.body;
-      console.log('[PaymentController] Flutterwave webhook received:', JSON.stringify(event, null, 2));
+      logError(event, 'PaymentController.flutterwaveCallback');
 
       // Flutterwave v4 webhook structure
       const {
@@ -136,7 +141,7 @@ export class PaymentController {
             payment_type: data.payment_type,
             completedAt: new Date(),
           });
-          console.log(`[PaymentController] Payment successful: ${reference}`);
+          logError(reference, 'PaymentController.flutterwaveCallback');
           break;
 
         case 'charge.failed':
@@ -148,11 +153,11 @@ export class PaymentController {
             currency: data.currency,
             failedAt: new Date(),
           });
-          console.log(`[PaymentController] Payment failed: ${reference}`);
+          logError(reference, 'PaymentController.flutterwaveCallback');
           break;
 
         default:
-          console.log(`[PaymentController] Unhandled event type: ${eventType}`);
+          logError(eventType, 'PaymentController.flutterwaveCallback');
       }
 
       // Always respond with 200 OK quickly
@@ -162,7 +167,7 @@ export class PaymentController {
         received: true,
       });
     } catch (error: any) {
-      console.error('[PaymentController] Error processing Flutterwave webhook:', error);
+      logError(error.message, 'PaymentController.flutterwaveCallback');
       // Still return 200 to prevent retries
       return res.status(200).json({
         message: 'Webhook received but processing failed',
@@ -176,7 +181,7 @@ export class PaymentController {
    * @deprecated Use flutterwaveCallback instead
    */
   static async mtnCallback(_req: Request, res: Response): Promise<Response> {
-    console.warn('[PaymentController] MTN callback is deprecated. Use Flutterwave webhook instead.');
+    logError('MTN callback is deprecated. Use Flutterwave webhook instead.', 'PaymentController.mtnCallback');
     return res.status(200).json({
       message: 'Deprecated endpoint. Use /api/payments/flutterwave/callback',
     });
@@ -187,7 +192,7 @@ export class PaymentController {
    * @deprecated Use flutterwaveCallback instead
    */
   static async airtelCallback(_req: Request, res: Response): Promise<Response> {
-    console.warn('[PaymentController] Airtel callback is deprecated. Use Flutterwave webhook instead.');
+    logError('Airtel callback is deprecated. Use Flutterwave webhook instead.', 'PaymentController.airtelCallback');
     return res.status(200).json({
       message: 'Deprecated endpoint. Use /api/payments/flutterwave/callback',
     });
@@ -203,6 +208,7 @@ export class PaymentController {
 
       const payment = await PaymentModel.findByReference(reference);
       if (!payment) {
+        logError('Payment not found', 'PaymentController.getPaymentStatus');
         return res.status(404).json({ error: 'Payment not found' });
       }
 
@@ -211,7 +217,7 @@ export class PaymentController {
         data: payment,
       });
     } catch (error: any) {
-      console.error('[PaymentController] Error getting payment status:', error);
+      logError(error.message, 'PaymentController.getPaymentStatus');
       return res.status(500).json({
         error: error.message || 'Failed to get payment status',
       });

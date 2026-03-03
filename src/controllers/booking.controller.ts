@@ -7,12 +7,14 @@ import { authenticate, authorize } from '../middleware/auth';
 import { AuthRequest } from '../middleware/auth';
 import { UserRole, BookingStatus } from '../types';
 import pool from '../config/database';
+import { logError } from '../utils/logger';
 
 const validate = (validations: any[]) => [
   ...validations,
   (req: Request, res: Response, next: any) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      logError(errors.array().join(', '), 'BookingController.validate');
       return res.status(400).json({
         status: 'error',
         message: 'Validation failed',
@@ -63,6 +65,7 @@ export class BookingController {
           data: booking,
         });
       } catch (error: any) {
+        logError(error.message, 'BookingController.create');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -100,6 +103,7 @@ export class BookingController {
           data: bookings,
         });
       } catch (error: any) {
+        logError(error.message, 'BookingController.getMyBookings');
         return res.status(500).json({
           status: 'error',
           message: error.message,
@@ -137,6 +141,7 @@ export class BookingController {
           data: bookings,
         });
       } catch (error: any) {
+        logError(error.message, 'BookingController.getProviderBookings');
         return res.status(500).json({
           status: 'error',
           message: error.message,
@@ -159,18 +164,21 @@ export class BookingController {
 
         const booking = await BookingModel.findById(bookingId);
         if (!booking) {
+          logError('Booking not found', 'BookingController.accept');
           return res.status(404).json({
             status: 'error',
             message: 'Booking not found',
           });
         }
         if (booking.providerId !== userId) {
+          logError('You can only accept bookings assigned to you', 'BookingController.accept');
           return res.status(403).json({
             status: 'error',
             message: 'You can only accept bookings assigned to you',
           });
         }
         if (booking.status !== 'pending') {
+          logError('Booking is not in a pending state', 'BookingController.accept');
           return res.status(400).json({
             status: 'error',
             message: 'Booking is not in a pending state',
@@ -188,6 +196,7 @@ export class BookingController {
           data: updated,
         });
       } catch (error: any) {
+        logError(error.message, 'BookingController.accept');
         return res.status(500).json({
           status: 'error',
           message: error.message,
@@ -210,18 +219,21 @@ export class BookingController {
 
         const booking = await BookingModel.findById(bookingId);
         if (!booking) {
+          logError('Booking not found', 'BookingController.decline');
           return res.status(404).json({
             status: 'error',
             message: 'Booking not found',
           });
         }
         if (booking.providerId !== userId) {
+          logError('You can only decline bookings assigned to you', 'BookingController.decline');
           return res.status(403).json({
             status: 'error',
             message: 'You can only decline bookings assigned to you',
           });
         }
         if (booking.status !== 'pending') {
+          logError('Booking is not in a pending state', 'BookingController.decline');
           return res.status(400).json({
             status: 'error',
             message: 'Booking is not in a pending state',
@@ -239,6 +251,7 @@ export class BookingController {
           data: updated,
         });
       } catch (error: any) {
+        logError(error.message, 'BookingController.decline');
         return res.status(500).json({
           status: 'error',
           message: error.message,
@@ -258,6 +271,7 @@ static getChat = [
     query('offset').optional().isInt({ min: 0 }).withMessage('Offset must be non-negative'),
   ]),
   (_req: AuthRequest, res: Response) => {
+    logError('Chat functionality removed. Use WhatsApp via /api/bookings/:id/whatsapp', 'BookingController.getChat');
     return res.status(410).json({
       status: 'error',
       message: 'Chat functionality removed. Use WhatsApp via /api/bookings/:id/whatsapp',
@@ -275,6 +289,7 @@ static sendMessage = [
     body('content').notEmpty().withMessage('Message content is required'),
   ]),
   (_req: AuthRequest, res: Response) => {
+    logError('Chat functionality removed. Use WhatsApp via /api/bookings/:id/whatsapp', 'BookingController.sendMessage');
     return res.status(410).json({
       status: 'error',
       message: 'Chat functionality removed. Use WhatsApp via /api/bookings/:id/whatsapp',
@@ -295,12 +310,14 @@ static sendMessage = [
 
         const booking = await BookingModel.findById(bookingId);
         if (!booking) {
+          logError('Booking not found', 'BookingController.openWhatsApp');
           return res.status(404).json({
             status: 'error',
             message: 'Booking not found',
           });
         }
         if (booking.customerId !== userId && booking.providerId !== userId) {
+          logError('You are not part of this booking', 'BookingController.openWhatsApp');
           return res.status(403).json({
             status: 'error',
             message: 'You are not part of this booking',
@@ -314,6 +331,7 @@ static sendMessage = [
         );
 
         if (otherUserQuery.rows.length === 0 || !otherUserQuery.rows[0].phone) {
+          logError('Could not retrieve contact number', 'BookingController.openWhatsApp');
           return res.status(400).json({
             status: 'error',
             message: 'Could not retrieve contact number',
@@ -332,6 +350,7 @@ static sendMessage = [
           data: { whatsappLink },
         });
       } catch (error: any) {
+        logError(error.message, 'BookingController.openWhatsApp');
         return res.status(500).json({
           status: 'error',
           message: error.message,

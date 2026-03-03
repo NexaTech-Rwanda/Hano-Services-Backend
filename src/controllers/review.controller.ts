@@ -4,6 +4,7 @@ import { validate } from '../middleware/validation';
 import { AuthRequest } from '../middleware/auth';
 import { ReviewService } from '../services/review.service';
 import { UserRole } from '../types';
+import { logError } from '../utils/logger';
 
 export class ReviewController {
   /**
@@ -41,6 +42,7 @@ export class ReviewController {
           data: review,
         });
       } catch (error: any) {
+        logError(error.message, 'ReviewController.create');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -84,6 +86,7 @@ export class ReviewController {
           nextCursor,
         });
       } catch (error: any) {
+        logError(error.message, 'ReviewController.listForProvider');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -108,6 +111,7 @@ export class ReviewController {
         data: review,
       });
     } catch (error: any) {
+      logError(error.message, 'ReviewController.getByIdForUser');
       return res.status(400).json({
         status: 'error',
         message: error.message,

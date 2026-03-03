@@ -3,6 +3,7 @@ import { AuthService } from '../services/auth.service';
 import { body } from 'express-validator';
 import { validate } from '../middleware/validation';
 import { UserRole } from '../types';
+import { logError } from '../utils/logger';
 
 export class AuthController {
   /**
@@ -51,6 +52,7 @@ export class AuthController {
           data: result,
         });
       } catch (error: any) {
+        logError(error.message, 'AuthController.register');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -82,6 +84,7 @@ export class AuthController {
           message: 'OTP sent successfully',
         });
       } catch (error: any) {
+        logError(error.message, 'AuthController.sendOTP');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -108,22 +111,17 @@ export class AuthController {
       try {
         const { phone, code } = req.body;
 
-        const isValid = await AuthService.verifyOTP(phone, code);
+        const result = await AuthService.loginWithOTP(phone, code);
 
-        if (!isValid) {
-          return res.status(400).json({
-            status: 'error',
-            message: 'Invalid or expired OTP',
-          });
-        }
-
-        console.log(`Phone number ${phone} verified successfully`);
+        console.log(`Phone number ${phone} verified and user logged in successfully`);
 
         return res.json({
           status: 'success',
           message: 'Phone number verified successfully',
+          data: result,
         });
       } catch (error: any) {
+        logError(error.message, 'AuthController.verifyOTP');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -156,6 +154,7 @@ export class AuthController {
           data: result,
         });
       } catch (error: any) {
+        logError(error.message, 'AuthController.login');
         return res.status(401).json({
           status: 'error',
           message: error.message,
@@ -191,6 +190,7 @@ export class AuthController {
           data: result,
         });
       } catch (error: any) {
+        logError(error.message, 'AuthController.loginWithOTP');
         return res.status(401).json({
           status: 'error',
           message: error.message,
@@ -225,6 +225,7 @@ export class AuthController {
           message: 'Password reset successfully',
         });
       } catch (error: any) {
+        logError(error.message, 'AuthController.resetPassword');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -241,6 +242,7 @@ export class AuthController {
     try {
       const { refreshToken } = req.body;
       if (!refreshToken) {
+        logError('Refresh token is required', 'AuthController.refreshToken');
         return res.status(400).json({
           status: 'error',
           message: 'refreshToken is required',
@@ -256,6 +258,7 @@ export class AuthController {
         data: result,
       });
     } catch (error: any) {
+      logError(error.message, 'AuthController.refreshToken');
       return res.status(401).json({
         status: 'error',
         message: error.message || 'Invalid refresh token',
@@ -272,6 +275,7 @@ export class AuthController {
       // `authenticate` middleware should attach userId to request
       const userId = (req as any).userId as string | undefined;
       if (!userId) {
+        logError('Unauthorized', 'AuthController.logout');
         return res.status(401).json({
           status: 'error',
           message: 'Unauthorized',
@@ -287,6 +291,7 @@ export class AuthController {
         message: 'Logged out successfully',
       });
     } catch (error: any) {
+      logError(error.message, 'AuthController.logout');
       return res.status(500).json({
         status: 'error',
         message: error.message || 'Failed to logout',

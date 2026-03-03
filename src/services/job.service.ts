@@ -1,21 +1,28 @@
 import { JobModel, Job, JobStatus } from '../models/Job';
 import { PushNotificationService } from './push-notification.service';
 import pool from '../config/database';
+import { logError } from '../utils/logger';
 
 export class JobService {
   /**
    * Create a new job and notify relevant providers
    */
   static async createJob(data: any): Promise<Job> {
-    const job = await JobModel.create(data);
+    try {
+      const job = await JobModel.create(data);
 
-    // Notify providers in the same category
-    // This is an async action that shouldn't block the response
-    this.notifyProvidersOfNewJob(job).catch(err => 
-      console.error('[JobService] Failed to notify providers:', err)
-    );
+      // Notify providers in the same category
+      // This is an async action that shouldn't block the response
+      this.notifyProvidersOfNewJob(job).catch(err => {
+        console.error('[JobService] Failed to notify providers:', err);
+        logError(err.message, 'JobService.notifyProvidersOfNewJob');
+      });
 
-    return job;
+      return job;
+    } catch (error: any) {
+      logError(error.message, 'JobService.createJob');
+      throw error;
+    }
   }
 
   /**
