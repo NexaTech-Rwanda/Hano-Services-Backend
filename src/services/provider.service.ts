@@ -264,4 +264,50 @@ export class ProviderService {
 
     return await VerificationRequestModel.findByProviderId(providerId);
   }
+
+  /**
+   * Get provider statistics (KPIs)
+   */
+  static async getStats(userId: string) {
+    const provider = await ProviderModel.findByUserId(userId);
+    if (!provider) {
+      throw new Error('Provider profile not found');
+    }
+
+    const [bookingsRes, earningsRes, ratingRes] = await Promise.all([
+      // Count bookings by status
+      pool.query(
+        'SELECT status, COUNT(*)::int AS count FROM bookings WHERE provider_id = $1 GROUP BY status',
+        [userId]
+      ),
+      // Calculate total earnings from successful payments
+      pool.query(
+        `SELECT COALESCE(SUM(amount), 0)::float AS total 
+         FROM payments 
+         WHERE provider_id = $1 AND status = 'successful'`,
+        [userId]
+      ),
+      // Get current average rating
+      pool.query(
+        'SELECT COALESCE(AVG(rating), 0)::float AS avg_rating FROM reviews WHERE provider_id = $1',
+        [userId]
+      ),
+    ]);
+
+    const stats = {
+      jobsDone: 0,
+      pendingJobs: 0,
+      activeJobs: 0,
+      earnings: earningsRes.rows[0].total || 0,
+      averageRating: ratingRes.rows[0].avg_rating || 0,
+    };
+
+    bookingsRes.rows.forEach((row) => {
+      if (row.status === 'completed') stats.jobsDone = row.count;
+      if (row.status === 'pending') stats.pendingJobs = row.count;
+      if (row.status === 'accepted') stats.activeJobs = row.count;
+    });
+
+    return stats;
+  }
 }

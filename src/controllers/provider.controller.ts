@@ -729,4 +729,25 @@ export class ProviderController {
       });
     }
   };
+
+  /**
+   * Get provider statistics
+   * GET /api/providers/me/stats
+   */
+  static getStats = async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const stats = await ProviderService.getStats(userId);
+      res.json({
+        status: 'success',
+        data: stats,
+      });
+    } catch (error: any) {
+      logError(error.message, 'ProviderController.getStats');
+      res.status(400).json({
+        status: 'error',
+        message: error.message,
+      });
+    }
+  };
 }

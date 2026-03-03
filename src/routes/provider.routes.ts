@@ -376,6 +376,45 @@ router.get('/me/profile', authenticate, authorize(UserRole.PROVIDER), ProviderCo
 
 /**
  * @swagger
+ * /api/providers/me/stats:
+ *   get:
+ *     summary: Get current user's provider statistics (Provider only)
+ *     tags: [Providers]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Provider statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     jobsDone:
+ *                       type: integer
+ *                     pendingJobs:
+ *                       type: integer
+ *                     activeJobs:
+ *                       type: integer
+ *                     earnings:
+ *                       type: number
+ *                     averageRating:
+ *                       type: number
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ */
+router.get('/me/stats', authenticate, authorize(UserRole.PROVIDER), ProviderController.getStats);
+
+/**
+ * @swagger
  * /api/providers/{id}:
  *   put:
  *     summary: Update provider profile (Provider only)
