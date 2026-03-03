@@ -41,6 +41,11 @@ export class AuthController {
           password
         );
 
+        // Immediately trigger OTP generation and sending upon successful registration
+        await AuthService.sendOTP(phone);
+
+        console.log("User registered successfully:", result);
+
         return res.status(201).json({
           status: 'success',
           data: result,
@@ -69,6 +74,8 @@ export class AuthController {
         const { phone } = req.body;
 
         await AuthService.sendOTP(phone);
+
+        console.log(`OTP sent to ${phone} successfully`);
 
         return res.json({
           status: 'success',
@@ -110,6 +117,8 @@ export class AuthController {
           });
         }
 
+        console.log(`Phone number ${phone} verified successfully`);
+
         return res.json({
           status: 'success',
           message: 'Phone number verified successfully',
@@ -139,6 +148,8 @@ export class AuthController {
         const { phone, password } = req.body;
 
         const result = await AuthService.login(phone, password);
+
+        console.log(`User with phone ${phone} logged in successfully`);
 
         return res.json({
           status: 'success',
@@ -173,6 +184,8 @@ export class AuthController {
 
         const result = await AuthService.loginWithOTP(phone, code);
 
+        console.log(`User with phone ${phone} logged in with OTP successfully`);
+
         return res.json({
           status: 'success',
           data: result,
@@ -205,6 +218,8 @@ export class AuthController {
 
         await AuthService.resetPassword(phone, newPassword);
 
+        console.log(`Password reset for phone ${phone} successfully`);
+
         return res.json({
           status: 'success',
           message: 'Password reset successfully',
@@ -234,6 +249,8 @@ export class AuthController {
 
       const result = await AuthService.refreshTokens(refreshToken);
 
+      console.log(`Access token refreshed successfully for refresh token: ${refreshToken}`);
+
       return res.json({
         status: 'success',
         data: result,
@@ -262,6 +279,8 @@ export class AuthController {
       }
 
       await AuthService.logout(userId);
+
+      console.log(`User with ID ${userId} logged out successfully`);
 
       return res.json({
         status: 'success',

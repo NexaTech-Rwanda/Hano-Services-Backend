@@ -148,6 +148,8 @@ export class ProviderController {
             provider;
         }
 
+        console.log("Provider profile created successfully:", finalProvider); 
+
         return res.status(201).json({
           status: 'success',
           data: finalProvider,
@@ -350,6 +352,8 @@ export class ProviderController {
           isFeatured,
           featuredUntil: featuredUntil ? new Date(featuredUntil) : undefined,
         });
+
+        console.log("Provider profile updated successfully:", provider); 
 
         return res.json({
           status: 'success',
@@ -566,6 +570,8 @@ export class ProviderController {
           description
         );
 
+        console.log("Portfolio image added successfully:", portfolio); 
+
         return res.status(201).json({
           status: 'success',
           data: portfolio,
@@ -691,6 +697,8 @@ export class ProviderController {
           message: 'Verification request not found',
         });
       }
+
+      console.log("Verification request fetched successfully:", request); 
 
       return res.json({
         status: 'success',

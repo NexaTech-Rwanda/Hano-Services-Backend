@@ -31,6 +31,8 @@ export class UserController {
         providerProfile = await ProviderModel.findByUserId(userId);
       }
 
+      console.log(`Fetched profile for user ID ${userId} successfully`);
+
       return res.json({
         status: 'success',
         data: {
@@ -66,6 +68,8 @@ export class UserController {
           email,
           phone,
         });
+
+        console.log(`Updated profile for user ID ${userId} successfully`);
 
         return res.json({
           status: 'success',
@@ -121,6 +125,8 @@ export class UserController {
 
         await UserModel.updatePassword(userId, newPassword);
 
+        console.log(`Password updated successfully for user ID ${userId}`);
+
         return res.json({
           status: 'success',
           message: 'Password updated successfully',
@@ -150,6 +156,8 @@ export class UserController {
         const { preferredContactMethod } = req.body;
 
         const updatedUser = await UserModel.updatePreferredContactMethod(userId, preferredContactMethod);
+
+        console.log(`Updated preferred contact method for user ID ${userId} to ${preferredContactMethod} successfully`);
 
         return res.json({
           status: 'success',
@@ -212,6 +220,8 @@ export class UserController {
       } else {
         await UserModel.updateProfile(userId, { photo: uploadResult.url });
       }
+
+      console.log(`Profile photo uploaded successfully for user ID ${userId}`);
 
       return res.json({
         status: 'success',
@@ -277,6 +287,8 @@ export class UserController {
           location,
         });
 
+        console.log(`Updated profile for provider user ID ${userId} successfully`);
+
         return res.json({
           status: 'success',
           data: updatedProvider,
@@ -319,6 +331,8 @@ export class UserController {
           Number(latitude),
           Number(longitude)
         );
+
+        console.log(`Location tracked for user ID ${userId} at (${latitude}, ${longitude}) successfully`);
 
         return res.status(201).json({
           status: 'success',

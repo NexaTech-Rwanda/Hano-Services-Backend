@@ -56,6 +56,8 @@ export class BookingController {
           notes,
         }, imageFile);
 
+        console.log("Booking created successfully:", booking); 
+
         return res.status(201).json({
           status: 'success',
           data: booking,
@@ -91,6 +93,8 @@ export class BookingController {
           offset: offset ? parseInt(offset as string, 10) : undefined,
         });
 
+        console.log("Bookings fetched successfully:", bookings); 
+
         return res.json({
           status: 'success',
           data: bookings,
@@ -125,6 +129,8 @@ export class BookingController {
           limit: limit ? parseInt(limit as string, 10) : undefined,
           offset: offset ? parseInt(offset as string, 10) : undefined,
         });
+
+        console.log("Provider bookings fetched successfully:", bookings); 
 
         return res.json({
           status: 'success',
@@ -175,6 +181,8 @@ export class BookingController {
           status: BookingStatus.ACCEPTED,
         });
 
+        console.log("Booking accepted successfully:", updated); 
+
         return res.json({
           status: 'success',
           data: updated,
@@ -223,6 +231,8 @@ export class BookingController {
         const updated = await BookingModel.update(bookingId, {
           status: BookingStatus.DECLINED,
         });
+
+        console.log("Booking declined successfully:", updated); 
 
         return res.json({
           status: 'success',
@@ -314,6 +324,8 @@ static sendMessage = [
           otherUserQuery.rows[0].phone,
           `Hello! I have a question about our booking scheduled for ${booking.scheduledDate}.`
         );
+
+        console.log("WhatsApp link generated successfully:", whatsappLink); 
 
         return res.json({
           status: 'success',
