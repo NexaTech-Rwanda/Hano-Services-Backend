@@ -4,6 +4,7 @@ import { validate } from '../middleware/validation';
 import { AuthRequest } from '../middleware/auth';
 import { ReviewService } from '../services/review.service';
 import { UserRole } from '../types';
+import { logError } from '../utils/logger';
 
 export class ReviewController {
   /**
@@ -41,6 +42,7 @@ export class ReviewController {
           data: review,
         });
       } catch (error: any) {
+        logError(error.message, 'ReviewController.create');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -59,10 +61,10 @@ export class ReviewController {
         .optional()
         .isInt({ min: 1, max: 100 })
         .withMessage('limit must be between 1 and 100'),
-      query('offset')
+      query('cursor')
         .optional()
-        .isInt({ min: 0 })
-        .withMessage('offset must be a non-negative integer'),
+        .isString()
+        .withMessage('cursor must be a string'),
     ]),
     async (req: Request, res: Response) => {
       try {
@@ -70,22 +72,21 @@ export class ReviewController {
         const limit = req.query.limit
           ? parseInt(req.query.limit as string, 10)
           : undefined;
-        const offset = req.query.offset
-          ? parseInt(req.query.offset as string, 10)
-          : undefined;
+        const cursor = req.query.cursor as string | undefined;
 
-        const reviews = await ReviewService.listProviderReviews(
+        const { items, nextCursor } = await ReviewService.listProviderReviews(
           providerId,
-          limit,
-          offset
+          { limit, cursor }
         );
 
         return res.json({
           status: 'success',
-          data: reviews,
-          count: reviews.length,
+          data: items,
+          count: items.length,
+          nextCursor,
         });
       } catch (error: any) {
+        logError(error.message, 'ReviewController.listForProvider');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -110,6 +111,7 @@ export class ReviewController {
         data: review,
       });
     } catch (error: any) {
+      logError(error.message, 'ReviewController.getByIdForUser');
       return res.status(400).json({
         status: 'error',
         message: error.message,

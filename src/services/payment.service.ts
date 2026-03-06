@@ -1,10 +1,12 @@
 import axios from 'axios';
 import { config } from '../config/config';
+import crypto from 'crypto';
 
 export enum PaymentChannel {
   MTN_MOMO = 'mtn_momo',
   AIRTEL_MONEY = 'airtel_money',
   CARD = 'card',
+  MOBILE_MONEY = 'mobile_money', // Generic mobile money through Flutterwave
 }
 
 export interface PaymentInitRequest {
@@ -26,20 +28,79 @@ export interface PaymentInitResponse {
 }
 
 /**
- * NOTE: This is a provider-agnostic scaffold.
- * You still need to plug in a real PSP (e.g. MTN MoMo API, Airtel Money API,
- * or an aggregator like Flutterwave/Paystack/Stripe) and map their fields
- * into this abstraction.
+ * Payment service using Flutterwave v4 API
+ * Flutterwave supports MTN Mobile Money, Airtel Money, and Card payments
+ * Documentation: https://developer.flutterwave.com/docs
  */
 export class PaymentService {
+  private static accessTokenCache: { token: string; expiresAt: number } | null = null;
+
+  /**
+   * Generate Flutterwave OAuth access token
+   * Tokens are valid for 10 minutes
+   */
+  private static async getAccessToken(): Promise<string> {
+    // Check if we have a valid cached token
+    if (this.accessTokenCache && this.accessTokenCache.expiresAt > Date.now()) {
+      return this.accessTokenCache.token;
+    }
+
+    // Use Client-Id and Client-Secret for v4 API, or fallback to Secret Key for v3
+    const clientId = config.payments.flutterwave.clientId;
+    const clientSecret = config.payments.flutterwave.clientSecret;
+    const secretKey = config.payments.flutterwave.secretKey;
+
+    if (!clientId || !clientSecret) {
+      // Fallback to v3 API if Client-Id/Secret not available
+      if (!secretKey) {
+        throw new Error('FLUTTERWAVE_CLIENT_ID and FLUTTERWAVE_CLIENT_SECRET (or FLUTTERWAVE_SECRET_KEY) are required');
+      }
+      return secretKey; // v3 API uses secret key directly
+    }
+
+    try {
+      const response = await axios.post(
+        config.payments.flutterwave.authUrl!,
+        new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          grant_type: 'client_credentials',
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
+
+      const { access_token, expires_in } = response.data;
+      const expiresAt = Date.now() + (expires_in * 1000) - 60000; // Expire 1 minute early
+
+      // Cache the token
+      this.accessTokenCache = {
+        token: access_token,
+        expiresAt,
+      };
+
+      return access_token;
+    } catch (error: any) {
+      console.error('[PaymentService] Flutterwave token generation error:', error.response?.data || error.message);
+      throw new Error(
+        `Failed to generate Flutterwave access token: ${error.response?.data?.error_description || error.message}`
+      );
+    }
+  }
+
   static async initiatePayment(
     payload: PaymentInitRequest
   ): Promise<PaymentInitResponse> {
+    // Flutterwave handles all payment methods through a unified API
+    // Map our channels to Flutterwave payment methods
     switch (payload.channel) {
       case PaymentChannel.MTN_MOMO:
-        return this.initiateMomoPayment(payload);
       case PaymentChannel.AIRTEL_MONEY:
-        return this.initiateAirtelPayment(payload);
+      case PaymentChannel.MOBILE_MONEY:
+        return this.initiateMobileMoneyPayment(payload);
       case PaymentChannel.CARD:
         return this.initiateCardPayment(payload);
       default:
@@ -47,95 +108,221 @@ export class PaymentService {
     }
   }
 
-  private static async initiateMomoPayment(
+  /**
+   * Initiate Mobile Money payment through Flutterwave v4 API
+   * Supports MTN Mobile Money, Airtel Money, and other mobile money providers
+   * Documentation: https://developer.flutterwave.com/docs/mobile-money
+   */
+  private static async initiateMobileMoneyPayment(
     payload: PaymentInitRequest
   ): Promise<PaymentInitResponse> {
-    if (!config.payments.momo.apiUrl || !config.payments.momo.apiKey) {
+    if (!payload.phoneNumber) {
+      throw new Error('phoneNumber is required for mobile money payments');
+    }
+    if (!payload.email) {
+      throw new Error('email is required for Flutterwave payments');
+    }
+
+    try {
+      // Get access token
+      const accessToken = await this.getAccessToken();
+
+      // Format phone number (remove + and spaces)
+      let phoneNumber = payload.phoneNumber.replace(/[^\d]/g, '');
+      // Ensure it starts with country code (Rwanda: 250)
+      if (!phoneNumber.startsWith('250')) {
+        phoneNumber = `250${phoneNumber}`;
+      }
+
+      // Generate unique transaction reference
+      const txRef = `HANOSERVICES_${payload.customerId}_${Date.now()}`;
+      const traceId = `trace_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Use callback URL from payload or config
+      const callbackUrl = payload.callbackUrl || config.payments.flutterwave.callbackUrl;
+
+      // Determine payment provider based on channel
+      // For Rwanda: 'mtn' or 'airtel'
+      let paymentProvider = 'mtn'; // Default to MTN
+      if (payload.channel === PaymentChannel.AIRTEL_MONEY) {
+        paymentProvider = 'airtel';
+      }
+
+      // Flutterwave v4 API - Mobile Money payment
+      // First create a customer, then create a charge
+      // Step 1: Create customer
+      const customerResponse = await axios.post(
+        `${config.payments.flutterwave.apiUrl}/customers`,
+        {
+          email: payload.email,
+          phone: {
+            country_code: '250',
+            number: phoneNumber.substring(3), // Remove country code prefix
+          },
+          name: {
+            first: payload.customerId.split('_')[0] || 'Customer',
+            last: payload.customerId.split('_')[1] || 'User',
+          },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'X-Trace-Id': traceId,
+          },
+        }
+      );
+
+      const customerId = customerResponse.data.data?.id;
+      if (!customerId) {
+        throw new Error('Failed to create customer');
+      }
+
+      // Step 2: Create charge using mobile money
+      const chargeResponse = await axios.post(
+        `${config.payments.flutterwave.apiUrl}/charges`,
+        {
+          reference: txRef,
+          currency: payload.currency || 'RWF',
+          customer_id: customerId,
+          amount: payload.amount,
+          payment_method: {
+            type: 'mobile_money',
+            mobile_money: {
+              provider: paymentProvider,
+              phone: {
+                country_code: '250',
+                number: phoneNumber.substring(3),
+              },
+            },
+          },
+          redirect_url: callbackUrl,
+          meta: {
+            customer_id: payload.customerId,
+            provider_id: payload.providerId,
+            description: payload.description || 'HanoServices payment',
+          },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'X-Trace-Id': traceId,
+          },
+        }
+      );
+
+      const { status, message, data } = chargeResponse.data;
+
+      if (status === 'success' || status === 'pending') {
+        return {
+          providerReference: txRef,
+          status: data?.status === 'pending' ? 'pending' : 'processing',
+          checkoutUrl: data?.next_action?.redirect_url?.url || undefined,
+        };
+      }
+
+      throw new Error(message || 'Failed to initiate payment');
+    } catch (error: any) {
+      console.error('[PaymentService] Flutterwave mobile money error:', error.response?.data || error.message);
       throw new Error(
-        'MoMo payment is not configured. Set MOMO_API_URL and MOMO_API_KEY.'
+        `Failed to initiate mobile money payment: ${error.response?.data?.message || error.message}`
       );
     }
-    if (!payload.phoneNumber) {
-      throw new Error('phoneNumber is required for MTN MoMo payments');
-    }
-
-    // TODO: Replace with actual MoMo API call.
-    // This is just a placeholder to show where integration goes.
-    const response = await axios.post(
-      `${config.payments.momo.apiUrl}/placeholder-endpoint`,
-      {
-        amount: payload.amount,
-        currency: payload.currency,
-        msisdn: payload.phoneNumber,
-        externalId: payload.customerId,
-        description: payload.description ?? 'HanoServices payment',
-        callbackUrl: payload.callbackUrl,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${config.payments.momo.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    // Map PSP response into our abstraction
-    return {
-      providerReference: response.data.reference ?? 'momo-ref-placeholder',
-      status: 'pending',
-      checkoutUrl: response.data.checkout_url,
-    };
   }
 
-  private static async initiateAirtelPayment(
-    payload: PaymentInitRequest
-  ): Promise<PaymentInitResponse> {
-    if (!config.payments.airtel.apiKey) {
-      throw new Error('Airtel Money is not configured. Set AIRTEL_MONEY_API_KEY.');
-    }
-    if (!payload.phoneNumber) {
-      throw new Error('phoneNumber is required for Airtel Money payments');
-    }
-
-    // TODO: Replace with actual Airtel Money API call.
-    return {
-      providerReference: 'airtel-ref-placeholder',
-      status: 'pending',
-    };
-  }
-
+  /**
+   * Initiate Card payment through Flutterwave v4 API
+   * Documentation: https://developer.flutterwave.com/docs/charging-a-card
+   */
   private static async initiateCardPayment(
     payload: PaymentInitRequest
   ): Promise<PaymentInitResponse> {
-    if (!config.payments.card?.apiKey || !config.payments.card?.apiUrl) {
-      throw new Error(
-        'Card payments are not configured. Set CARD_API_URL and CARD_API_KEY.'
-      );
+    if (!payload.email) {
+      throw new Error('email is required for card payments');
     }
 
-    // TODO: Replace with actual card PSP API call (e.g. Flutterwave/Stripe/etc.)
-    const response = await axios.post(
-      `${config.payments.card.apiUrl}/placeholder-card-endpoint`,
-      {
-        amount: payload.amount,
-        currency: payload.currency,
-        email: payload.email,
-        description: payload.description ?? 'HanoServices card payment',
-        callbackUrl: payload.callbackUrl,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${config.payments.card.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    try {
+      // Get access token
+      const accessToken = await this.getAccessToken();
 
-    return {
-      providerReference: response.data.reference ?? 'card-ref-placeholder',
-      status: 'pending',
-      checkoutUrl: response.data.checkout_url,
-    };
+      // Generate unique transaction reference
+      const txRef = `HANOSERVICES_${payload.customerId}_${Date.now()}`;
+      const traceId = `trace_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // Use callback URL from payload or config
+      const callbackUrl = payload.callbackUrl || config.payments.flutterwave.callbackUrl;
+
+      // Flutterwave v4 API - Card payment
+      // Step 1: Create customer
+      const customerResponse = await axios.post(
+        `${config.payments.flutterwave.apiUrl}/customers`,
+        {
+          email: payload.email,
+          phone: payload.phoneNumber
+            ? {
+                country_code: '250',
+                number: payload.phoneNumber.replace(/[^\d]/g, '').substring(3),
+              }
+            : undefined,
+          name: {
+            first: payload.customerId.split('_')[0] || 'Customer',
+            last: payload.customerId.split('_')[1] || 'User',
+          },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+            'X-Trace-Id': traceId,
+          },
+        }
+      );
+
+      const customerId = customerResponse.data.data?.id;
+      if (!customerId) {
+        throw new Error('Failed to create customer');
+      }
+
+      // Step 2: Create charge (card payment requires card details from frontend)
+      // For now, we'll return a payment link that can be used with Flutterwave's hosted payment page
+      // In production, you'd collect card details securely and create a payment method first
+      return {
+        providerReference: txRef,
+        status: 'pending',
+        checkoutUrl: callbackUrl, // Frontend should redirect to Flutterwave payment page
+        // Note: For full card integration, you need to implement card collection
+        // and encryption on the frontend, then create payment method and charge
+      };
+    } catch (error: any) {
+      console.error('[PaymentService] Flutterwave card payment error:', error.response?.data || error.message);
+      throw new Error(
+        `Failed to initiate card payment: ${error.response?.data?.message || error.message}`
+      );
+    }
+  }
+
+  /**
+   * Verify Flutterwave webhook signature
+   * Flutterwave v4 sends a hash in the 'verif-hash' header
+   * Documentation: https://developer.flutterwave.com/docs/webhooks
+   */
+  static verifyWebhookSignature(
+    payload: string,
+    signature: string
+  ): boolean {
+    if (!config.payments.flutterwave.secretHash) {
+      console.warn('[PaymentService] FLUTTERWAVE_SECRET_HASH not set, skipping signature verification');
+      return true; // Allow if not configured (for development)
+    }
+
+    // Flutterwave uses SHA512 HMAC with the secret hash
+    const hash = crypto
+      .createHmac('sha512', config.payments.flutterwave.secretHash)
+      .update(payload)
+      .digest('hex');
+
+    return hash === signature;
   }
 }
 

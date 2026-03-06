@@ -1,5 +1,6 @@
 import pool from '../config/database';
 import { UserRole, BookingStatus, VerificationStatus } from '../types';
+import { decodeCursor, getNextCursor } from '../utils/pagination';
 
 export class AdminService {
   /**
@@ -93,12 +94,11 @@ export class AdminService {
     search?: string;
     limit?: number;
     offset?: number;
-  }) {
-    const { role, search } = options;
-    const limit = options.limit && options.limit > 0 && options.limit <= 100
-      ? options.limit
-      : 20;
-    const offset = options.offset && options.offset >= 0 ? options.offset : 0;
+    cursor?: string;
+  }): Promise<{ items: any[]; nextCursor: string | null }> {
+    const { role, search, cursor } = options;
+    const limit =
+      options.limit && options.limit > 0 && options.limit <= 100 ? options.limit : 20;
 
     const conditions: string[] = [];
     const values: any[] = [];
@@ -116,16 +116,29 @@ export class AdminService {
       paramCount += 1;
     }
 
+    const decoded = decodeCursor(cursor);
+    if (decoded) {
+      conditions.push(`(created_at, id) < ($${paramCount}, $${paramCount + 1})`);
+      values.push(decoded.createdAt, decoded.id);
+      paramCount += 2;
+    }
+
     let query = 'SELECT id, phone, email, role, is_phone_verified, created_at, updated_at FROM users';
     if (conditions.length > 0) {
       query += ' WHERE ' + conditions.join(' AND ');
     }
     query += ' ORDER BY created_at DESC';
-    query += ` LIMIT $${paramCount++} OFFSET $${paramCount}`;
-    values.push(limit, offset);
+    query += ` LIMIT $${paramCount++}`;
+    values.push(limit);
 
     const result = await pool.query(query, values);
-    return result.rows;
+    const items = result.rows;
+    const nextCursor = getNextCursor(
+      items,
+      (row) => row.id as string,
+      (row) => row.created_at as Date | string | null | undefined
+    );
+    return { items, nextCursor };
   }
 
   /**
@@ -136,12 +149,11 @@ export class AdminService {
     categoryId?: string;
     limit?: number;
     offset?: number;
-  }) {
-    const { isVerified, categoryId } = options;
-    const limit = options.limit && options.limit > 0 && options.limit <= 100
-      ? options.limit
-      : 20;
-    const offset = options.offset && options.offset >= 0 ? options.offset : 0;
+    cursor?: string;
+  }): Promise<{ items: any[]; nextCursor: string | null }> {
+    const { isVerified, categoryId, cursor } = options;
+    const limit =
+      options.limit && options.limit > 0 && options.limit <= 100 ? options.limit : 20;
 
     const conditions: string[] = [];
     const values: any[] = [];
@@ -154,6 +166,13 @@ export class AdminService {
     if (categoryId) {
       conditions.push(`p.service_category_id = $${paramCount++}`);
       values.push(categoryId);
+    }
+
+    const decoded = decodeCursor(cursor);
+    if (decoded) {
+      conditions.push(`(p.created_at, p.id) < ($${paramCount}, $${paramCount + 1})`);
+      values.push(decoded.createdAt, decoded.id);
+      paramCount += 2;
     }
 
     let query = `
@@ -170,11 +189,17 @@ export class AdminService {
       query += ' WHERE ' + conditions.join(' AND ');
     }
     query += ' ORDER BY p.created_at DESC';
-    query += ` LIMIT $${paramCount++} OFFSET $${paramCount}`;
-    values.push(limit, offset);
+    query += ` LIMIT $${paramCount++}`;
+    values.push(limit);
 
     const result = await pool.query(query, values);
-    return result.rows;
+    const items = result.rows;
+    const nextCursor = getNextCursor(
+      items,
+      (row) => row.id as string,
+      (row) => row.created_at as Date | string | null | undefined
+    );
+    return { items, nextCursor };
   }
 
   /**
@@ -184,12 +209,11 @@ export class AdminService {
     status?: BookingStatus;
     limit?: number;
     offset?: number;
-  }) {
-    const { status } = options;
-    const limit = options.limit && options.limit > 0 && options.limit <= 100
-      ? options.limit
-      : 20;
-    const offset = options.offset && options.offset >= 0 ? options.offset : 0;
+    cursor?: string;
+  }): Promise<{ items: any[]; nextCursor: string | null }> {
+    const { status, cursor } = options;
+    const limit =
+      options.limit && options.limit > 0 && options.limit <= 100 ? options.limit : 20;
 
     const conditions: string[] = [];
     const values: any[] = [];
@@ -198,6 +222,13 @@ export class AdminService {
     if (status) {
       conditions.push(`b.status = $${paramCount++}`);
       values.push(status);
+    }
+
+    const decoded = decodeCursor(cursor);
+    if (decoded) {
+      conditions.push(`(b.created_at, b.id) < ($${paramCount}, $${paramCount + 1})`);
+      values.push(decoded.createdAt, decoded.id);
+      paramCount += 2;
     }
 
     let query = `
@@ -216,11 +247,17 @@ export class AdminService {
       query += ' WHERE ' + conditions.join(' AND ');
     }
     query += ' ORDER BY b.created_at DESC';
-    query += ` LIMIT $${paramCount++} OFFSET $${paramCount}`;
-    values.push(limit, offset);
+    query += ` LIMIT $${paramCount++}`;
+    values.push(limit);
 
     const result = await pool.query(query, values);
-    return result.rows;
+    const items = result.rows;
+    const nextCursor = getNextCursor(
+      items,
+      (row) => row.id as string,
+      (row) => row.created_at as Date | string | null | undefined
+    );
+    return { items, nextCursor };
   }
 }
 

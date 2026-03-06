@@ -1,14 +1,19 @@
 import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
+import crypto from 'crypto';
 import { config } from '../config/config';
 import { UserModel } from '../models/User';
 import { OTPModel } from '../models/OTP';
 import { UserRole } from '../types';
 import { SmsService } from './sms.service';
+import { RefreshTokenModel } from '../models/RefreshToken';
+import { logError } from '../utils/logger';
 
 export interface AuthTokens {
   accessToken: string;
+  refreshToken: string;
   user: {
     id: string;
+    username: string;
     phone: string;
     email?: string;
     role: UserRole;
@@ -32,36 +37,63 @@ export class AuthService {
   }
 
   /**
+   * Generate and persist a refresh token for a user
+   */
+  static async generateRefreshToken(userId: string): Promise<string> {
+    const token = crypto.randomBytes(64).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + config.jwt.refreshExpiresInDays);
+
+    await RefreshTokenModel.create(userId, token, expiresAt);
+    return token;
+  }
+
+  /**
    * Register a new user
    */
   static async register(
+    username: string,
     phone: string,
     role: UserRole,
     email?: string,
     password?: string
   ): Promise<AuthTokens> {
-    // Check if user already exists
-    const existingUser = await UserModel.findByPhone(phone);
-    if (existingUser) {
-      throw new Error('User with this phone number already exists');
+    try {
+      // Check if username already exists
+      const existingUserByUsername = await UserModel.findByUsername(username);
+      if (existingUserByUsername) {
+        throw new Error('Username already taken');
+      }
+
+      // Check if phone number already exists
+      const existingUserByPhone = await UserModel.findByPhone(phone);
+      if (existingUserByPhone) {
+        throw new Error('User with this phone number already exists');
+      }
+
+      // Create user
+      const user = await UserModel.create(username, phone, role, email, password);
+
+      // Generate tokens
+      const accessToken = this.generateToken(user.id, user.role);
+      const refreshToken = await this.generateRefreshToken(user.id);
+
+      return {
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          username: user.username,
+          phone: user.phone,
+          email: user.email,
+          role: user.role,
+          isPhoneVerified: user.isPhoneVerified,
+        },
+      };
+    } catch (error: any) {
+      logError(error.message, 'AuthService.register');
+      throw error;
     }
-
-    // Create user
-    const user = await UserModel.create(phone, role, email, password);
-
-    // Generate token
-    const accessToken = this.generateToken(user.id, user.role);
-
-    return {
-      accessToken,
-      user: {
-        id: user.id,
-        phone: user.phone,
-        email: user.email,
-        role: user.role,
-        isPhoneVerified: user.isPhoneVerified,
-      },
-    };
   }
 
   /**
@@ -134,11 +166,14 @@ export class AuthService {
     }
 
     const accessToken = this.generateToken(user.id, user.role);
+    const refreshToken = await this.generateRefreshToken(user.id);
 
     return {
       accessToken,
+      refreshToken,
       user: {
         id: user.id,
+        username: user.username,
         phone: user.phone,
         email: user.email,
         role: user.role,
@@ -167,11 +202,14 @@ export class AuthService {
     }
 
     const accessToken = this.generateToken(user.id, user.role);
+    const refreshToken = await this.generateRefreshToken(user.id);
 
     return {
       accessToken,
+      refreshToken,
       user: {
         id: user.id,
+        username: user.username,
         phone: user.phone,
         email: user.email,
         role: user.role,
@@ -193,5 +231,45 @@ export class AuthService {
     }
 
     await UserModel.updatePassword(user.id, newPassword);
+  }
+
+  /**
+   * Refresh access token using a valid refresh token
+   */
+  static async refreshTokens(refreshToken: string): Promise<AuthTokens> {
+    const record = await RefreshTokenModel.findValid(refreshToken);
+    if (!record) {
+      throw new Error('Invalid or expired refresh token');
+    }
+
+    const user = await UserModel.findById(record.userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Rotate refresh token: revoke old and issue new
+    await RefreshTokenModel.revokeById(record.id);
+    const newRefreshToken = await this.generateRefreshToken(user.id);
+    const accessToken = this.generateToken(user.id, user.role);
+
+    return {
+      accessToken,
+      refreshToken: newRefreshToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        phone: user.phone,
+        email: user.email,
+        role: user.role,
+        isPhoneVerified: user.isPhoneVerified,
+      },
+    };
+  }
+
+  /**
+   * Logout user by revoking all their refresh tokens
+   */
+  static async logout(userId: string): Promise<void> {
+    await RefreshTokenModel.revokeAllForUser(userId);
   }
 }

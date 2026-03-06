@@ -2,12 +2,14 @@ import { Router } from 'express';
 import { ProviderController } from '../controllers/provider.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { UserRole } from '../types';
+import { createResourceLimiter } from '../middleware/rateLimit';
+import { upload } from '../middleware/upload';
 
 const router = Router();
 
 /**
  * @swagger
- * /providers/search:
+ * /api/providers/search:
  *   get:
  *     summary: Search providers with filters
  *     tags: [Providers]
@@ -107,7 +109,7 @@ router.get('/search', ProviderController.search);
 
 /**
  * @swagger
- * /providers/{id}:
+ * /api/providers/{id}:
  *   get:
  *     summary: Get provider profile by ID
  *     tags: [Providers]
@@ -143,7 +145,7 @@ router.get('/:id', ProviderController.getById);
 
 /**
  * @swagger
- * /providers/{id}/portfolio:
+ * /api/providers/{id}/portfolio:
  *   get:
  *     summary: Get provider portfolio images
  *     tags: [Providers]
@@ -177,7 +179,7 @@ router.get('/:id/portfolio', ProviderController.getPortfolio);
 
 /**
  * @swagger
- * /providers:
+ * /api/providers:
  *   post:
  *     summary: Create provider profile (Provider only)
  *     tags: [Providers]
@@ -186,6 +188,91 @@ router.get('/:id/portfolio', ProviderController.getPortfolio);
  *     requestBody:
  *       required: true
  *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - serviceCategoryId
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "John Doe"
+ *               serviceCategoryId:
+ *                 type: string
+ *                 format: uuid
+ *                 example: "123e4567-e89b-12d3-a456-426614174000"
+ *               photo:
+ *                 type: string
+ *                 format: binary
+ *               priceRangeMin:
+ *                 type: number
+ *                 example: 10000
+ *               priceRangeMax:
+ *                 type: number
+ *                 example: 50000
+ *               yearsOfExperience:
+ *                 type: integer
+ *                 example: 5
+ *               latitude:
+ *                 type: number
+ *                 format: float
+ *                 example: -1.9441
+ *               longitude:
+ *                 type: number
+ *                 format: float
+ *                 example: 30.0619
+ *               address:
+ *                 type: string
+ *                 example: "Kigali, Rwanda"
+ *               bio:
+ *                 type: string
+ *                 example: "Experienced plumber specializing in residential installations."
+ *               certifications:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["Certified Plumber", "Safety Training 2023"]
+ *               languages:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["English", "French", "Kinyarwanda"]
+ *               availabilityHours:
+ *                 type: object
+ *                 example:
+ *                   mon: { open: "08:00", close: "17:00" }
+ *                   tue: { open: "08:00", close: "17:00" }
+ *               responseRate:
+ *                 type: number
+ *                 format: float
+ *                 minimum: 0
+ *                 maximum: 100
+ *                 example: 95.5
+ *               responseTimeMinutes:
+ *                 type: integer
+ *                 minimum: 0
+ *                 example: 30
+ *               website:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://johndoe-plumbing.rw"
+ *               socialLinks:
+ *                 type: object
+ *                 example:
+ *                   twitter: "https://twitter.com/johndoe"
+ *                   linkedin: "https://linkedin.com/in/johndoe"
+ *               preferredContactMethod:
+ *                 type: string
+ *                 enum: [phone, email, whatsapp, sms]
+ *                 example: "whatsapp"
+ *               isFeatured:
+ *                 type: boolean
+ *                 example: false
+ *               featuredUntil:
+ *                 type: string
+ *                 format: date-time
+ *                 example: "2025-03-01T00:00:00Z"
  *         application/json:
  *           schema:
  *             type: object
@@ -244,11 +331,18 @@ router.get('/:id/portfolio', ProviderController.getPortfolio);
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.post('/', authenticate, authorize(UserRole.PROVIDER), ProviderController.create);
+router.post(
+  '/',
+  createResourceLimiter,
+  authenticate,
+  authorize(UserRole.PROVIDER),
+  upload.single('photo'),
+  ProviderController.create
+);
 
 /**
  * @swagger
- * /providers/me/profile:
+ * /api/providers/me/profile:
  *   get:
  *     summary: Get current user's provider profile (Provider only)
  *     tags: [Providers]
@@ -282,7 +376,46 @@ router.get('/me/profile', authenticate, authorize(UserRole.PROVIDER), ProviderCo
 
 /**
  * @swagger
- * /providers/{id}:
+ * /api/providers/me/stats:
+ *   get:
+ *     summary: Get current user's provider statistics (Provider only)
+ *     tags: [Providers]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Provider statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     jobsDone:
+ *                       type: integer
+ *                     pendingJobs:
+ *                       type: integer
+ *                     activeJobs:
+ *                       type: integer
+ *                     earnings:
+ *                       type: number
+ *                     averageRating:
+ *                       type: number
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ */
+router.get('/me/stats', authenticate, authorize(UserRole.PROVIDER), ProviderController.getStats);
+
+/**
+ * @swagger
+ * /api/providers/{id}:
  *   put:
  *     summary: Update provider profile (Provider only)
  *     tags: [Providers]
@@ -299,6 +432,39 @@ router.get('/me/profile', authenticate, authorize(UserRole.PROVIDER), ProviderCo
  *     requestBody:
  *       required: true
  *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "John Doe"
+ *               photo:
+ *                 type: string
+ *                 format: binary
+ *               serviceCategoryId:
+ *                 type: string
+ *                 format: uuid
+ *               priceRangeMin:
+ *                 type: number
+ *                 example: 10000
+ *               priceRangeMax:
+ *                 type: number
+ *                 example: 50000
+ *               yearsOfExperience:
+ *                 type: integer
+ *                 example: 5
+ *               latitude:
+ *                 type: number
+ *                 format: float
+ *                 example: -1.9441
+ *               longitude:
+ *                 type: number
+ *                 format: float
+ *                 example: 30.0619
+ *               address:
+ *                 type: string
+ *                 example: "Kigali, Rwanda"
  *         application/json:
  *           schema:
  *             type: object
@@ -353,11 +519,17 @@ router.get('/me/profile', authenticate, authorize(UserRole.PROVIDER), ProviderCo
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.put('/:id', authenticate, authorize(UserRole.PROVIDER), ProviderController.update);
+router.put(
+  '/:id',
+  authenticate,
+  authorize(UserRole.PROVIDER),
+  upload.single('photo'),
+  ProviderController.update
+);
 
 /**
  * @swagger
- * /providers/{id}/availability:
+ * /api/providers/{id}/availability:
  *   patch:
  *     summary: Update provider availability status (Provider only)
  *     tags: [Providers]
@@ -408,7 +580,7 @@ router.patch('/:id/availability', authenticate, authorize(UserRole.PROVIDER), Pr
 
 /**
  * @swagger
- * /providers/{id}/portfolio:
+ * /api/providers/{id}/portfolio:
  *   post:
  *     summary: Add portfolio image (Provider only)
  *     tags: [Providers]
@@ -425,11 +597,23 @@ router.patch('/:id/availability', authenticate, authorize(UserRole.PROVIDER), Pr
  *     requestBody:
  *       required: true
  *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *               imageUrl:
+ *                 type: string
+ *                 format: uri
+ *                 example: "https://example.com/image.jpg"
+ *               description:
+ *                 type: string
+ *                 example: "Completed bathroom renovation"
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - imageUrl
  *             properties:
  *               imageUrl:
  *                 type: string
@@ -458,11 +642,18 @@ router.patch('/:id/availability', authenticate, authorize(UserRole.PROVIDER), Pr
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.post('/:id/portfolio', authenticate, authorize(UserRole.PROVIDER), ProviderController.addPortfolioImage);
+router.post(
+  '/:id/portfolio',
+  createResourceLimiter,
+  authenticate,
+  authorize(UserRole.PROVIDER),
+  upload.single('image'),
+  ProviderController.addPortfolioImage
+);
 
 /**
  * @swagger
- * /providers/{id}/portfolio/{portfolioId}:
+ * /api/providers/{id}/portfolio/{portfolioId}:
  *   delete:
  *     summary: Delete portfolio image (Provider only)
  *     tags: [Providers]
@@ -504,11 +695,11 @@ router.post('/:id/portfolio', authenticate, authorize(UserRole.PROVIDER), Provid
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.delete('/:id/portfolio/:portfolioId', authenticate, authorize(UserRole.PROVIDER), ProviderController.deletePortfolioImage);
+router.delete('/:id/portfolio/:portfolioId', createResourceLimiter, authenticate, authorize(UserRole.PROVIDER), ProviderController.deletePortfolioImage);
 
 /**
  * @swagger
- * /providers/{id}/verification:
+ * /api/providers/{id}/verification:
  *   post:
  *     summary: Submit verification request (Provider only)
  *     tags: [Providers]
@@ -567,11 +758,11 @@ router.delete('/:id/portfolio/:portfolioId', authenticate, authorize(UserRole.PR
  *       403:
  *         $ref: '#/components/responses/Forbidden'
  */
-router.post('/:id/verification', authenticate, authorize(UserRole.PROVIDER), ProviderController.submitVerification);
+router.post('/:id/verification', createResourceLimiter, authenticate, authorize(UserRole.PROVIDER), ProviderController.submitVerification);
 
 /**
  * @swagger
- * /providers/{id}/verification:
+ * /api/providers/{id}/verification:
  *   get:
  *     summary: Get verification request (Provider only)
  *     tags: [Providers]

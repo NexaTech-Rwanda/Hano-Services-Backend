@@ -1,10 +1,12 @@
-import { BookingModel } from '../models/Booking';
+import { BookingModel } from '../models/BookingModel';
 import { BookingStatus, UserRole } from '../types';
 import { ProviderModel } from '../models/Provider';
+import { StorageService } from './storage.service';
+import { PushNotificationService } from './push-notification.service';
 
 export class BookingService {
   /**
-   * Create a booking (customer -> provider)
+   * Create a booking (customer -> provider) with optional image upload
    */
   static async createBooking(
     customerId: string,
@@ -16,7 +18,9 @@ export class BookingService {
       latitude?: number;
       longitude?: number;
       address?: string;
-    }
+      notes?: string;
+    },
+    imageFile?: Express.Multer.File
   ) {
     const provider = await ProviderModel.findById(providerId);
     if (!provider) {
@@ -27,7 +31,43 @@ export class BookingService {
       throw new Error('Provider does not offer this service category');
     }
 
-    return BookingModel.create(customerId, providerId, serviceCategoryId, data);
+    let imageUrl: string | undefined;
+
+    // Upload image if provided
+    if (imageFile) {
+      const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedMimeTypes.includes(imageFile.mimetype)) {
+        throw new Error('Only JPEG, JPG, and PNG images are allowed');
+      }
+
+      // Generate unique filename
+      const fileExt = imageFile.originalname.split('.').pop();
+      const fileName = `booking-${Date.now()}.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const uploadResult = await StorageService.uploadImage({
+        path: `bookings/${fileName}`,
+        contentType: imageFile.mimetype,
+        file: imageFile.buffer,
+        bucket: 'bookings',
+      });
+      imageUrl = uploadResult.url;
+    }
+
+    // Create booking with image URL
+    const booking = await BookingModel.create(customerId, providerId, serviceCategoryId, {
+      ...data,
+      imageUrl,
+    });
+
+    // Notify provider
+    PushNotificationService.sendToUser(provider.userId, {
+      title: 'New Booking Request',
+      body: `You have a new booking request from a customer.`,
+      data: { bookingId: booking.id, type: 'new_booking' }
+    }).catch(err => console.error('[BookingService] Notification error:', err));
+
+    return booking;
   }
 
   /**
@@ -109,7 +149,31 @@ export class BookingService {
       updateData.status = BookingStatus.CANCELLED;
     }
 
-    return BookingModel.update(bookingId, updateData);
+    // Filter out null values for BookingModel.update
+    const filteredUpdateData: {
+      scheduledDate?: Date;
+      description?: string;
+      latitude?: number;
+      longitude?: number;
+      address?: string;
+      status?: BookingStatus;
+    } = {};
+    if (updateData.scheduledDate !== null && updateData.scheduledDate !== undefined) {
+      filteredUpdateData.scheduledDate = updateData.scheduledDate;
+    }
+    if (updateData.description !== undefined) filteredUpdateData.description = updateData.description;
+    if (updateData.latitude !== null && updateData.latitude !== undefined) {
+      filteredUpdateData.latitude = updateData.latitude;
+    }
+    if (updateData.longitude !== null && updateData.longitude !== undefined) {
+      filteredUpdateData.longitude = updateData.longitude;
+    }
+    if (updateData.address !== null && updateData.address !== undefined) {
+      filteredUpdateData.address = updateData.address;
+    }
+    if (updateData.status !== undefined) filteredUpdateData.status = updateData.status;
+
+    return BookingModel.update(bookingId, filteredUpdateData);
   }
 
   /**
@@ -135,7 +199,19 @@ export class BookingService {
       throw new Error('Cannot change a completed or cancelled booking');
     }
 
-    return BookingModel.update(bookingId, { status });
+    const updatedBooking = await BookingModel.update(bookingId, { status });
+
+    if (updatedBooking) {
+      // Notify customer
+      const statusTitle = status.charAt(0).toUpperCase() + status.slice(1);
+      PushNotificationService.sendToUser(booking.customerId, {
+        title: `Booking ${statusTitle}`,
+        body: `Your booking has been ${status}.`,
+        data: { bookingId, status, type: 'booking_update' }
+      }).catch(err => console.error('[BookingService] Notification error:', err));
+    }
+
+    return updatedBooking;
   }
 }
 

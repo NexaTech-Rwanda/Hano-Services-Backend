@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { ReviewController } from '../controllers/review.controller';
 import { authenticate } from '../middleware/auth';
+import { createResourceLimiter } from '../middleware/rateLimit';
 
 const router = Router();
 
 /**
  * @swagger
- * /reviews/provider/{providerId}:
+ * /api/reviews/provider/{providerId}:
  *   get:
  *     summary: List reviews for a provider
  *     tags: [Reviews]
@@ -27,12 +28,10 @@ const router = Router();
  *           default: 20
  *         description: Number of results to return
  *       - in: query
- *         name: offset
+ *         name: cursor
  *         schema:
- *           type: integer
- *           minimum: 0
- *           default: 0
- *         description: Number of results to skip
+ *           type: string
+ *         description: Pagination cursor
  *     responses:
  *       200:
  *         description: List of reviews for the provider
@@ -58,7 +57,7 @@ router.get('/provider/:providerId', ReviewController.listForProvider);
 
 /**
  * @swagger
- * /reviews:
+ * /api/reviews:
  *   post:
  *     summary: Create a review (Customer only)
  *     tags: [Reviews]
@@ -110,11 +109,11 @@ router.get('/provider/:providerId', ReviewController.listForProvider);
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
  */
-router.post('/', authenticate, ReviewController.create);
+router.post('/', createResourceLimiter, authenticate, ReviewController.create);
 
 /**
  * @swagger
- * /reviews/{id}:
+ * /api/reviews/{id}:
  *   get:
  *     summary: Get review by ID (for authenticated user)
  *     tags: [Reviews]

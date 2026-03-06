@@ -52,13 +52,9 @@ export class ReviewService {
    */
   static async listProviderReviews(
     providerId: string,
-    limit?: number,
-    offset?: number
+    options: { limit?: number; cursor?: string }
   ) {
-    const safeLimit = limit && limit > 0 && limit <= 100 ? limit : 50;
-    const safeOffset = offset && offset >= 0 ? offset : 0;
-
-    return ReviewModel.findByProviderId(providerId, safeLimit, safeOffset);
+    return ReviewModel.findByProviderId(providerId, options);
   }
 
   /**

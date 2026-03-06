@@ -2,12 +2,16 @@ import { Router } from 'express';
 import { ServiceCategoryModel } from '../models/ServiceCategory';
 import { authenticate, authorize } from '../middleware/auth';
 import { UserRole } from '../types';
+import { upload } from '../middleware/upload';
+import crypto from 'crypto';
+import path from 'path';
+import { StorageService } from '../services/storage.service';
 
 const router = Router();
 
 /**
  * @swagger
- * /categories:
+ * /api/categories:
  *   get:
  *     summary: Get all service categories
  *     tags: [Categories]
@@ -44,7 +48,7 @@ router.get('/', async (_req, res) => {
 
 /**
  * @swagger
- * /categories/{id}:
+ * /api/categories/{id}:
  *   get:
  *     summary: Get category by ID
  *     tags: [Categories]
@@ -99,7 +103,7 @@ router.get('/:id', async (req, res) => {
 
 /**
  * @swagger
- * /categories:
+ * /api/categories:
  *   post:
  *     summary: Create a new category (Admin only)
  *     tags: [Categories]
@@ -108,6 +112,21 @@ router.get('/:id', async (req, res) => {
  *     requestBody:
  *       required: true
  *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Plumbing"
+ *               description:
+ *                 type: string
+ *                 example: "Plumbing services and repairs"
+ *               icon:
+ *                 type: string
+ *                 format: binary
  *         application/json:
  *           schema:
  *             type: object
@@ -147,10 +166,43 @@ router.post(
   '/',
   authenticate,
   authorize(UserRole.ADMIN),
+  upload.single('icon'),
   async (req, res) => {
     try {
+      const uploadedIcon = (req as any).file as Express.Multer.File | undefined;
       const { name, description, icon } = req.body;
-      const category = await ServiceCategoryModel.create(name, description, icon);
+
+      const category = await ServiceCategoryModel.create(
+        name,
+        description,
+        uploadedIcon ? undefined : icon
+      );
+
+      if (uploadedIcon) {
+        if (!uploadedIcon.mimetype?.toLowerCase().startsWith('image/')) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Uploaded icon must be an image',
+          });
+        }
+
+        const ext = path.extname(uploadedIcon.originalname || '').toLowerCase();
+        const namePart = crypto.randomBytes(8).toString('hex');
+        const filePath = `categories/${category.id}/icon-${Date.now()}-${namePart}${ext}`;
+        const { url } = await StorageService.uploadImage({
+          path: filePath,
+          contentType: uploadedIcon.mimetype,
+          file: uploadedIcon.buffer,
+        });
+
+        const updated = await ServiceCategoryModel.update(category.id, undefined, undefined, url);
+        if (updated) {
+          return res.status(201).json({
+            status: 'success',
+            data: updated,
+          });
+        }
+      }
       return res.status(201).json({
         status: 'success',
         data: category,
@@ -166,7 +218,7 @@ router.post(
 
 /**
  * @swagger
- * /categories/{id}:
+ * /api/categories/{id}:
  *   put:
  *     summary: Update category (Admin only)
  *     tags: [Categories]
@@ -183,6 +235,19 @@ router.post(
  *     requestBody:
  *       required: true
  *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: "Plumbing"
+ *               description:
+ *                 type: string
+ *                 example: "Plumbing services and repairs"
+ *               icon:
+ *                 type: string
+ *                 format: binary
  *         application/json:
  *           schema:
  *             type: object
@@ -226,15 +291,41 @@ router.put(
   '/:id',
   authenticate,
   authorize(UserRole.ADMIN),
+  upload.single('icon'),
   async (req, res) => {
     try {
+      const uploadedIcon = (req as any).file as Express.Multer.File | undefined;
       const { name, description, icon } = req.body;
-      const category = await ServiceCategoryModel.update(
-        req.params.id,
-        name,
-        description,
-        icon
-      );
+
+      let finalIcon = icon;
+      if (uploadedIcon) {
+        if (!uploadedIcon.mimetype?.toLowerCase().startsWith('image/')) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Uploaded icon must be an image',
+          });
+        }
+
+        const existing = await ServiceCategoryModel.findById(req.params.id);
+        if (!existing) {
+          return res.status(404).json({
+            status: 'error',
+            message: 'Category not found',
+          });
+        }
+
+        const ext = path.extname(uploadedIcon.originalname || '').toLowerCase();
+        const namePart = crypto.randomBytes(8).toString('hex');
+        const filePath = `categories/${req.params.id}/icon-${Date.now()}-${namePart}${ext}`;
+        const { url } = await StorageService.uploadImage({
+          path: filePath,
+          contentType: uploadedIcon.mimetype,
+          file: uploadedIcon.buffer,
+        });
+        finalIcon = url;
+      }
+
+      const category = await ServiceCategoryModel.update(req.params.id, name, description, finalIcon);
       if (!category) {
         return res.status(404).json({
           status: 'error',
@@ -256,7 +347,7 @@ router.put(
 
 /**
  * @swagger
- * /categories/{id}:
+ * /api/categories/{id}:
  *   delete:
  *     summary: Delete category (Admin only)
  *     tags: [Categories]

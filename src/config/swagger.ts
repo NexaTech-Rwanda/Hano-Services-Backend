@@ -13,7 +13,7 @@ const options: swaggerJsdoc.Options = {
     },
     servers: [
       {
-        url: 'http://localhost:6000/api',
+        url: 'http://localhost:3000',
         description: 'Development server',
       },
     ],
@@ -57,6 +57,10 @@ const options: swaggerJsdoc.Options = {
               format: 'uuid',
               example: '123e4567-e89b-12d3-a456-426614174000',
             },
+            username: {
+              type: 'string',
+              example: 'john_doe',
+            },
             phone: {
               type: 'string',
               example: '+250788123456',
@@ -92,6 +96,10 @@ const options: swaggerJsdoc.Options = {
             accessToken: {
               type: 'string',
               example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+            },
+            refreshToken: {
+              type: 'string',
+              example: 'a3f3d0c2b6...',
             },
             user: {
               $ref: '#/components/schemas/User',
@@ -199,6 +207,23 @@ const options: swaggerJsdoc.Options = {
                   example: 'Kigali, Rwanda',
                 },
               },
+            },
+            categoryName: {
+              type: 'string',
+              nullable: true,
+              example: 'Plumbing',
+            },
+            averageRating: {
+              type: 'number',
+              example: 4.6,
+            },
+            totalReviews: {
+              type: 'integer',
+              example: 25,
+            },
+            portfolioCount: {
+              type: 'integer',
+              example: 8,
             },
             createdAt: {
               type: 'string',
@@ -343,24 +368,173 @@ const options: swaggerJsdoc.Options = {
             },
           },
         },
+        Booking: {
+          type: 'object',
+          properties: {
+            id: {
+              type: 'string',
+              format: 'uuid',
+            },
+            customerId: {
+              type: 'string',
+              format: 'uuid',
+            },
+            providerId: {
+              type: 'string',
+              format: 'uuid',
+            },
+            serviceCategoryId: {
+              type: 'string',
+              format: 'uuid',
+            },
+            status: {
+              type: 'string',
+              enum: ['pending', 'accepted', 'declined', 'completed', 'cancelled'],
+              example: 'pending',
+            },
+            scheduledDate: {
+              type: 'string',
+              format: 'date-time',
+              nullable: true,
+            },
+            description: {
+              type: 'string',
+              nullable: true,
+            },
+            location: {
+              type: 'object',
+              nullable: true,
+              properties: {
+                latitude: {
+                  type: 'number',
+                  example: -1.9441,
+                },
+                longitude: {
+                  type: 'number',
+                  example: 30.0619,
+                },
+                address: {
+                  type: 'string',
+                  nullable: true,
+                  example: 'Kigali, Rwanda',
+                },
+              },
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+            },
+          },
+        },
         DashboardSummary: {
           type: 'object',
           properties: {
-            totalUsers: {
-              type: 'integer',
-              example: 150,
+            users: {
+              type: 'object',
+              properties: {
+                total: {
+                  type: 'integer',
+                  example: 150,
+                },
+                customers: {
+                  type: 'integer',
+                  example: 100,
+                },
+                providers: {
+                  type: 'integer',
+                  example: 45,
+                },
+                admins: {
+                  type: 'integer',
+                  example: 5,
+                },
+              },
             },
-            totalProviders: {
-              type: 'integer',
-              example: 50,
+            providers: {
+              type: 'object',
+              properties: {
+                total: {
+                  type: 'integer',
+                  example: 50,
+                },
+                verified: {
+                  type: 'integer',
+                  example: 20,
+                },
+              },
             },
-            totalBookings: {
-              type: 'integer',
-              example: 200,
+            bookings: {
+              type: 'object',
+              properties: {
+                total: {
+                  type: 'integer',
+                  example: 200,
+                },
+                byStatus: {
+                  type: 'object',
+                  properties: {
+                    pending: {
+                      type: 'integer',
+                      example: 60,
+                    },
+                    accepted: {
+                      type: 'integer',
+                      example: 40,
+                    },
+                    declined: {
+                      type: 'integer',
+                      example: 10,
+                    },
+                    completed: {
+                      type: 'integer',
+                      example: 70,
+                    },
+                    cancelled: {
+                      type: 'integer',
+                      example: 20,
+                    },
+                  },
+                },
+              },
             },
-            pendingVerifications: {
-              type: 'integer',
-              example: 10,
+            reviews: {
+              type: 'object',
+              properties: {
+                total: {
+                  type: 'integer',
+                  example: 80,
+                },
+                averageRating: {
+                  type: 'number',
+                  example: 4.2,
+                },
+              },
+            },
+            verifications: {
+              type: 'object',
+              properties: {
+                byStatus: {
+                  type: 'object',
+                  properties: {
+                    pending: {
+                      type: 'integer',
+                      example: 10,
+                    },
+                    approved: {
+                      type: 'integer',
+                      example: 30,
+                    },
+                    rejected: {
+                      type: 'integer',
+                      example: 5,
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -398,11 +572,6 @@ const options: swaggerJsdoc.Options = {
         },
       },
     },
-    security: [
-      {
-        bearerAuth: [],
-      },
-    ],
   },
   apis: ['./src/routes/*.ts', './src/controllers/*.ts', './src/index.ts'],
 };

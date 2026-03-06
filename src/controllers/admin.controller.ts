@@ -7,6 +7,7 @@ import { ProviderModel } from '../models/Provider';
 import { ReviewModel } from '../models/Review';
 import { VerificationStatus, UserRole, BookingStatus } from '../types';
 import { AdminService } from '../services/admin.service';
+import { logError } from '../utils/logger';
 
 export class AdminController {
   /**
@@ -21,6 +22,7 @@ export class AdminController {
         data: summary,
       });
     } catch (error: any) {
+      logError(error.message, 'AdminController.getDashboardSummary');
       return res.status(500).json({
         status: 'error',
         message: error.message,
@@ -42,20 +44,24 @@ export class AdminController {
       const offset = req.query.offset
         ? parseInt(req.query.offset as string, 10)
         : undefined;
+      const cursor = req.query.cursor as string | undefined;
 
-      const users = await AdminService.listUsers({
+      const { items, nextCursor } = await AdminService.listUsers({
         role,
         search,
         limit,
         offset,
+        cursor,
       });
 
       return res.json({
         status: 'success',
-        data: users,
-        count: users.length,
+        data: items,
+        count: items.length,
+        nextCursor,
       });
     } catch (error: any) {
+      logError(error.message, 'AdminController.listUsers');
       return res.status(400).json({
         status: 'error',
         message: error.message,
@@ -81,20 +87,24 @@ export class AdminController {
       const offset = req.query.offset
         ? parseInt(req.query.offset as string, 10)
         : undefined;
+      const cursor = req.query.cursor as string | undefined;
 
-      const providers = await AdminService.listProviders({
+      const { items, nextCursor } = await AdminService.listProviders({
         isVerified,
         categoryId,
         limit,
         offset,
+        cursor,
       });
 
       return res.json({
         status: 'success',
-        data: providers,
-        count: providers.length,
+        data: items,
+        count: items.length,
+        nextCursor,
       });
     } catch (error: any) {
+      logError(error.message, 'AdminController.listProviders');
       return res.status(400).json({
         status: 'error',
         message: error.message,
@@ -115,19 +125,23 @@ export class AdminController {
       const offset = req.query.offset
         ? parseInt(req.query.offset as string, 10)
         : undefined;
+      const cursor = req.query.cursor as string | undefined;
 
-      const bookings = await AdminService.listBookings({
+      const { items, nextCursor } = await AdminService.listBookings({
         status,
         limit,
         offset,
+        cursor,
       });
 
       return res.json({
         status: 'success',
-        data: bookings,
-        count: bookings.length,
+        data: items,
+        count: items.length,
+        nextCursor,
       });
     } catch (error: any) {
+      logError(error.message, 'AdminController.listBookings');
       return res.status(400).json({
         status: 'error',
         message: error.message,
@@ -156,6 +170,7 @@ export class AdminController {
         count: requests.length,
       });
     } catch (error: any) {
+      logError(error.message, 'AdminController.getVerificationRequests');
       return res.status(500).json({
         status: 'error',
         message: error.message,
@@ -171,6 +186,7 @@ export class AdminController {
     try {
       const request = await VerificationRequestModel.findById(req.params.id);
       if (!request) {
+        logError('Verification request not found', 'AdminController.getVerificationRequest');
         return res.status(404).json({
           status: 'error',
           message: 'Verification request not found',
@@ -182,6 +198,7 @@ export class AdminController {
         data: request,
       });
     } catch (error: any) {
+      logError(error.message, 'AdminController.getVerificationRequest');
       return res.status(500).json({
         status: 'error',
         message: error.message,
@@ -212,6 +229,7 @@ export class AdminController {
         // Get the verification request
         const request = await VerificationRequestModel.findById(requestId);
         if (!request) {
+          logError('Verification request not found', 'AdminController.reviewVerificationRequest');
           return res.status(404).json({
             status: 'error',
             message: 'Verification request not found',
@@ -219,6 +237,7 @@ export class AdminController {
         }
 
         if (request.status !== 'pending') {
+          logError('This verification request has already been reviewed', 'AdminController.reviewVerificationRequest');
           return res.status(400).json({
             status: 'error',
             message: 'This verification request has already been reviewed',
@@ -247,6 +266,7 @@ export class AdminController {
           message: `Verification request ${status} successfully`,
         });
       } catch (error: any) {
+        logError(error.message, 'AdminController.reviewVerificationRequest');
         return res.status(400).json({
           status: 'error',
           message: error.message,
@@ -263,6 +283,7 @@ export class AdminController {
     try {
       const deleted = await ReviewModel.delete(req.params.id);
       if (!deleted) {
+        logError('Review not found', 'AdminController.deleteReview');
         return res.status(404).json({
           status: 'error',
           message: 'Review not found',
@@ -274,6 +295,7 @@ export class AdminController {
         message: 'Review deleted successfully',
       });
     } catch (error: any) {
+      logError(error.message, 'AdminController.deleteReview');
       return res.status(400).json({
         status: 'error',
         message: error.message,

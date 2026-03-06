@@ -10,13 +10,19 @@ const app: Express = express();
 
 // Middleware
 app.use(helmet());
-app.use(
-  cors({
-    origin: config.cors.origin,
-    credentials: true,
-  }),
-);
-app.use(express.json());
+app.use(cors({
+  origin: config.cors.origin,
+  credentials: true,
+}));
+
+// Capture raw JSON body so we can verify Flutterwave webhook signatures
+app.use(express.json({
+  verify: (req: any, _res, buf) => {
+    // Save raw body as string for HMAC verification (e.g., Flutterwave webhooks)
+    (req as any).rawBody = buf.toString('utf8');
+  },
+}));
+
 app.use(express.urlencoded({ extended: true }));
 
 /**
@@ -54,7 +60,9 @@ app.use(express.urlencoded({ extended: true }));
  *                   example: "error"
  *                 message:
  *                   type: string
- *                   example: "Database connection failed"
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
  */
 // Health check endpoint
 app.get("/health", async (_req: Request, res: Response) => {
@@ -67,18 +75,12 @@ app.get("/health", async (_req: Request, res: Response) => {
     });
   } catch (error) {
     return res.status(503).json({
-      status: "error",
-      message: "Database connection failed",
+      status: 'error',
+      message: 'Database connection failed',
+      timestamp: new Date().toISOString(),
     });
   }
 });
-
-// API routes
-import authRoutes from "./routes/auth.routes";
-import categoryRoutes from "./routes/categories.routes";
-import providerRoutes from "./routes/provider.routes";
-import adminRoutes from "./routes/admin.routes";
-import reviewRoutes from "./routes/review.routes";
 
 /**
  * @swagger
@@ -118,11 +120,30 @@ app.use(
   }),
 );
 
-app.use("/api/auth", authRoutes);
-app.use("/api/categories", categoryRoutes);
-app.use("/api/providers", providerRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/reviews", reviewRoutes);
+// Import routes
+import authRoutes from './routes/auth.routes';
+import categoriesRoutes from './routes/categories.routes';
+import providersRoutes from './routes/provider.routes';
+import adminRoutes from './routes/admin.routes';
+import reviewsRoutes from './routes/review.routes';
+import paymentRoutes from './routes/payment.routes';
+import userRoutes from './routes/user.routes';
+import jobRoutes from './routes/job.routes';
+import bookingRoutes from './routes/booking.routes';
+import { ReminderService } from './services/reminder.service';
+
+app.use('/api/auth', authRoutes);
+app.use('/api/categories', categoriesRoutes);
+app.use('/api/providers', providersRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/reviews', reviewsRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/bookings', bookingRoutes);
+
+// Initialize background services
+ReminderService.init();
 
 // Error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

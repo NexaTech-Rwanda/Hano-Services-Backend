@@ -1,11 +1,26 @@
 import { Request, Response } from 'express';
+import crypto from 'crypto';
+import path from 'path';
 import { body, query } from 'express-validator';
 import { validate } from '../middleware/validation';
 import { AuthRequest } from '../middleware/auth';
 import { ProviderService } from '../services/provider.service';
 import { ProviderAvailability } from '../types';
+import { StorageService } from '../services/storage.service';
+import { logError } from '../utils/logger';
 
 export class ProviderController {
+  private static getFileExtension(file: Express.Multer.File): string {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (ext && ext.length <= 10) return ext;
+
+    const mime = (file.mimetype || '').toLowerCase();
+    if (mime === 'image/jpeg') return '.jpg';
+    if (mime === 'image/png') return '.png';
+    if (mime === 'image/webp') return '.webp';
+    return '';
+  }
+
   /**
    * Create provider profile
    * POST /api/providers
@@ -37,10 +52,31 @@ export class ProviderController {
         .optional()
         .isFloat({ min: -180, max: 180 })
         .withMessage('Valid longitude is required'),
+      body('bio').optional().isString().withMessage('Bio must be a string'),
+      body('certifications').optional().isArray().withMessage('Certifications must be an array'),
+      body('languages').optional().isArray().withMessage('Languages must be an array'),
+      body('availabilityHours').optional().isObject().withMessage('Availability hours must be an object'),
+      body('responseRate')
+        .optional()
+        .isFloat({ min: 0, max: 100 })
+        .withMessage('Response rate must be between 0 and 100'),
+      body('responseTimeMinutes')
+        .optional()
+        .isInt({ min: 0 })
+        .withMessage('Response time minutes must be a non-negative integer'),
+      body('website').optional().isURL().withMessage('Website must be a valid URL'),
+      body('socialLinks').optional().isObject().withMessage('Social links must be an object'),
+      body('preferredContactMethod')
+        .optional()
+        .isIn(['phone', 'email', 'whatsapp', 'sms'])
+        .withMessage('Preferred contact method is invalid'),
+      body('isFeatured').optional().isBoolean().withMessage('isFeatured must be a boolean'),
+      body('featuredUntil').optional().isISO8601().withMessage('featuredUntil must be a valid date'),
     ]),
     async (req: AuthRequest, res: Response) => {
       try {
         const userId = req.userId!;
+        const uploadedPhoto = (req as any).file as Express.Multer.File | undefined;
         const {
           name,
           serviceCategoryId,
@@ -51,6 +87,17 @@ export class ProviderController {
           latitude,
           longitude,
           address,
+          bio,
+          certifications,
+          languages,
+          availabilityHours,
+          responseRate,
+          responseTimeMinutes,
+          website,
+          socialLinks,
+          preferredContactMethod,
+          isFeatured,
+          featuredUntil,
         } = req.body;
 
         const provider = await ProviderService.createProfile(
@@ -58,22 +105,60 @@ export class ProviderController {
           name,
           serviceCategoryId,
           {
-            photo,
+            photo: uploadedPhoto ? undefined : photo,
             priceRangeMin,
             priceRangeMax,
             yearsOfExperience,
             latitude,
             longitude,
             address,
+            bio,
+            certifications,
+            languages,
+            availabilityHours,
+            responseRate,
+            responseTimeMinutes,
+            website,
+            socialLinks,
+            preferredContactMethod,
+            isFeatured,
+            featuredUntil: featuredUntil ? new Date(featuredUntil) : undefined,
           }
         );
 
-        res.status(201).json({
+        let finalProvider = provider;
+        if (uploadedPhoto) {
+          if (!uploadedPhoto.mimetype?.toLowerCase().startsWith('image/')) {
+            logError('Uploaded photo must be an image', 'ProviderController.createProfile');
+            return res.status(400).json({
+              status: 'error',
+              message: 'Uploaded photo must be an image',
+            });
+          }
+
+          const ext = this.getFileExtension(uploadedPhoto);
+          const namePart = crypto.randomBytes(8).toString('hex');
+          const filePath = `providers/${provider.id}/photo-${Date.now()}-${namePart}${ext}`;
+          const { url } = await StorageService.uploadImage({
+            path: filePath,
+            contentType: uploadedPhoto.mimetype,
+            file: uploadedPhoto.buffer,
+          });
+
+          finalProvider =
+            (await ProviderService.updateProfile(provider.id, userId, { photo: url })) ||
+            provider;
+        }
+
+        console.log("Provider profile created successfully:", finalProvider); 
+
+        return res.status(201).json({
           status: 'success',
-          data: provider,
+          data: finalProvider,
         });
       } catch (error: any) {
-        res.status(400).json({
+        logError(error.message, 'ProviderController.createProfile');
+        return res.status(400).json({
           status: 'error',
           message: error.message,
         });
@@ -93,6 +178,7 @@ export class ProviderController {
         data: provider,
       });
     } catch (error: any) {
+      logError(error.message, 'ProviderController.getById');
       res.status(404).json({
         status: 'error',
         message: error.message,
@@ -113,6 +199,7 @@ export class ProviderController {
         data: provider,
       });
     } catch (error: any) {
+      logError(error.message, 'ProviderController.getMyProfile');
       res.status(404).json({
         status: 'error',
         message: error.message,
@@ -152,11 +239,32 @@ export class ProviderController {
         .optional()
         .isFloat({ min: -180, max: 180 })
         .withMessage('Valid longitude is required'),
+      body('bio').optional().isString().withMessage('Bio must be a string'),
+      body('certifications').optional().isArray().withMessage('Certifications must be an array'),
+      body('languages').optional().isArray().withMessage('Languages must be an array'),
+      body('availabilityHours').optional().isObject().withMessage('Availability hours must be an object'),
+      body('responseRate')
+        .optional()
+        .isFloat({ min: 0, max: 100 })
+        .withMessage('Response rate must be between 0 and 100'),
+      body('responseTimeMinutes')
+        .optional()
+        .isInt({ min: 0 })
+        .withMessage('Response time minutes must be a non-negative integer'),
+      body('website').optional().isURL().withMessage('Website must be a valid URL'),
+      body('socialLinks').optional().isObject().withMessage('Social links must be an object'),
+      body('preferredContactMethod')
+        .optional()
+        .isIn(['phone', 'email', 'whatsapp', 'sms'])
+        .withMessage('Preferred contact method is invalid'),
+      body('isFeatured').optional().isBoolean().withMessage('isFeatured must be a boolean'),
+      body('featuredUntil').optional().isISO8601().withMessage('featuredUntil must be a valid date'),
     ]),
     async (req: AuthRequest, res: Response) => {
       try {
         const userId = req.userId!;
         const providerId = req.params.id;
+        const uploadedPhoto = (req as any).file as Express.Multer.File | undefined;
         const {
           name,
           photo,
@@ -167,7 +275,66 @@ export class ProviderController {
           latitude,
           longitude,
           address,
+          bio,
+          certifications,
+          languages,
+          availabilityHours,
+          responseRate,
+          responseTimeMinutes,
+          website,
+          socialLinks,
+          preferredContactMethod,
+          isFeatured,
+          featuredUntil,
         } = req.body;
+
+        if (uploadedPhoto) {
+          await ProviderService.updateProfile(providerId, userId, {});
+          if (!uploadedPhoto.mimetype?.toLowerCase().startsWith('image/')) {
+            logError('Uploaded photo must be an image', 'ProviderController.updateProfile');
+            return res.status(400).json({
+              status: 'error',
+              message: 'Uploaded photo must be an image',
+            });
+          }
+
+          const ext = this.getFileExtension(uploadedPhoto);
+          const namePart = crypto.randomBytes(8).toString('hex');
+          const filePath = `providers/${providerId}/photo-${Date.now()}-${namePart}${ext}`;
+          const { url } = await StorageService.uploadImage({
+            path: filePath,
+            contentType: uploadedPhoto.mimetype,
+            file: uploadedPhoto.buffer,
+          });
+
+          const provider = await ProviderService.updateProfile(providerId, userId, {
+            name,
+            photo: url,
+            serviceCategoryId,
+            priceRangeMin,
+            priceRangeMax,
+            yearsOfExperience,
+            latitude,
+            longitude,
+            address,
+            bio,
+            certifications,
+            languages,
+            availabilityHours,
+            responseRate,
+            responseTimeMinutes,
+            website,
+            socialLinks,
+            preferredContactMethod,
+            isFeatured,
+            featuredUntil: featuredUntil ? new Date(featuredUntil) : undefined,
+          });
+
+          return res.json({
+            status: 'success',
+            data: provider,
+          });
+        }
 
         const provider = await ProviderService.updateProfile(providerId, userId, {
           name,
@@ -179,14 +346,28 @@ export class ProviderController {
           latitude,
           longitude,
           address,
+          bio,
+          certifications,
+          languages,
+          availabilityHours,
+          responseRate,
+          responseTimeMinutes,
+          website,
+          socialLinks,
+          preferredContactMethod,
+          isFeatured,
+          featuredUntil: featuredUntil ? new Date(featuredUntil) : undefined,
         });
 
-        res.json({
+        console.log("Provider profile updated successfully:", provider); 
+
+        return res.json({
           status: 'success',
           data: provider,
         });
       } catch (error: any) {
-        res.status(400).json({
+        logError(error.message, 'ProviderController.updateProfile');
+        return res.status(400).json({
           status: 'error',
           message: error.message,
         });
@@ -221,6 +402,7 @@ export class ProviderController {
           data: provider,
         });
       } catch (error: any) {
+        logError(error.message, 'ProviderController.updateAvailability');
         res.status(400).json({
           status: 'error',
           message: error.message,
@@ -275,10 +457,10 @@ export class ProviderController {
         .optional()
         .isInt({ min: 1, max: 100 })
         .withMessage('Limit must be between 1 and 100'),
-      query('offset')
+      query('cursor')
         .optional()
-        .isInt({ min: 0 })
-        .withMessage('Offset must be a non-negative integer'),
+        .isString()
+        .withMessage('cursor must be a string'),
     ]),
     async (req: Request, res: Response) => {
       try {
@@ -312,10 +494,10 @@ export class ProviderController {
           filters.isVerified = req.query.isVerified === 'true';
         }
         if (req.query.limit) {
-          filters.limit = parseInt(req.query.limit as string);
+          filters.limit = parseInt(req.query.limit as string, 10);
         }
-        if (req.query.offset) {
-          filters.offset = parseInt(req.query.offset as string);
+        if (req.query.cursor) {
+          filters.cursor = req.query.cursor as string;
         }
 
         const providers = await ProviderService.searchProviders(filters);
@@ -326,6 +508,7 @@ export class ProviderController {
           count: providers.length,
         });
       } catch (error: any) {
+        logError(error.message, 'ProviderController.search');
         res.status(400).json({
           status: 'error',
           message: error.message,
@@ -340,7 +523,7 @@ export class ProviderController {
    */
   static addPortfolioImage = [
     validate([
-      body('imageUrl').isURL().withMessage('Valid image URL is required'),
+      body('imageUrl').optional().isURL().withMessage('Valid image URL is required'),
       body('description')
         .optional()
         .isString()
@@ -350,21 +533,64 @@ export class ProviderController {
       try {
         const userId = req.userId!;
         const providerId = req.params.id;
+        const uploadedImage = (req as any).file as Express.Multer.File | undefined;
         const { imageUrl, description } = req.body;
+
+        if (!uploadedImage && !imageUrl) {
+          logError('Either imageUrl or an image file is required', 'ProviderController.addPortfolioImage');
+          return res.status(400).json({
+            status: 'error',
+            message: 'Either imageUrl or an image file is required',
+          });
+        }
+
+        // Verify provider ownership before uploading
+        const myProvider = await ProviderService.getProfileByUserId(userId);
+        if (!myProvider || myProvider.id !== providerId) {
+          logError('Unauthorized: You can only add to your own portfolio', 'ProviderController.addPortfolioImage');
+          return res.status(403).json({
+            status: 'error',
+            message: 'Unauthorized: You can only add to your own portfolio',
+          });
+        }
+
+        let finalImageUrl = imageUrl;
+        if (uploadedImage) {
+          if (!uploadedImage.mimetype?.toLowerCase().startsWith('image/')) {
+            logError('Uploaded portfolio image must be an image', 'ProviderController.addPortfolioImage');
+            return res.status(400).json({
+              status: 'error',
+              message: 'Uploaded portfolio image must be an image',
+            });
+          }
+
+          const ext = this.getFileExtension(uploadedImage);
+          const namePart = crypto.randomBytes(8).toString('hex');
+          const filePath = `providers/${providerId}/portfolio/image-${Date.now()}-${namePart}${ext}`;
+          const { url } = await StorageService.uploadImage({
+            path: filePath,
+            contentType: uploadedImage.mimetype,
+            file: uploadedImage.buffer,
+          });
+          finalImageUrl = url;
+        }
 
         const portfolio = await ProviderService.addPortfolioImage(
           providerId,
           userId,
-          imageUrl,
+          finalImageUrl,
           description
         );
 
-        res.status(201).json({
+        console.log("Portfolio image added successfully:", portfolio); 
+
+        return res.status(201).json({
           status: 'success',
           data: portfolio,
         });
       } catch (error: any) {
-        res.status(400).json({
+        logError(error.message, 'ProviderController.addPortfolioImage');
+        return res.status(400).json({
           status: 'error',
           message: error.message,
         });
@@ -384,6 +610,7 @@ export class ProviderController {
         data: portfolio,
       });
     } catch (error: any) {
+      logError(error.message, 'ProviderController.getPortfolio');
       res.status(400).json({
         status: 'error',
         message: error.message,
@@ -408,6 +635,7 @@ export class ProviderController {
         message: 'Portfolio image deleted successfully',
       });
     } catch (error: any) {
+      logError(error.message, 'ProviderController.deletePortfolioImage');
       res.status(400).json({
         status: 'error',
         message: error.message,
@@ -456,6 +684,7 @@ export class ProviderController {
           message: 'Verification request submitted successfully',
         });
       } catch (error: any) {
+        logError(error.message, 'ProviderController.submitVerification');
         res.status(400).json({
           status: 'error',
           message: error.message,
@@ -479,18 +708,43 @@ export class ProviderController {
       );
 
       if (!request) {
+        logError('Verification request not found', 'ProviderController.getVerificationRequest');
         return res.status(404).json({
           status: 'error',
           message: 'Verification request not found',
         });
       }
 
+      console.log("Verification request fetched successfully:", request); 
+
       return res.json({
         status: 'success',
         data: request,
       });
     } catch (error: any) {
+      logError(error.message, 'ProviderController.getVerificationRequest');
       return res.status(400).json({
+        status: 'error',
+        message: error.message,
+      });
+    }
+  };
+
+  /**
+   * Get provider statistics
+   * GET /api/providers/me/stats
+   */
+  static getStats = async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.userId!;
+      const stats = await ProviderService.getStats(userId);
+      res.json({
+        status: 'success',
+        data: stats,
+      });
+    } catch (error: any) {
+      logError(error.message, 'ProviderController.getStats');
+      res.status(400).json({
         status: 'error',
         message: error.message,
       });

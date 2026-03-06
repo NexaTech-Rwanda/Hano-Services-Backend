@@ -1,5 +1,6 @@
 import pool from '../config/database';
 import { Review } from '../types';
+import { decodeCursor, getNextCursor } from '../utils/pagination';
 
 export class ReviewModel {
   /**
@@ -63,18 +64,34 @@ export class ReviewModel {
    */
   static async findByProviderId(
     providerId: string,
-    limit = 50,
-    offset = 0
-  ): Promise<Review[]> {
-    const result = await pool.query(
-      `SELECT * FROM reviews
-       WHERE provider_id = $1
-       ORDER BY created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [providerId, limit, offset]
+    options: { limit?: number; cursor?: string }
+  ): Promise<{ items: Review[]; nextCursor: string | null }> {
+    const limit =
+      options.limit && options.limit > 0 && options.limit <= 100 ? options.limit : 50;
+
+    const values: any[] = [providerId];
+    let paramCount = 2;
+    const cursor = decodeCursor(options.cursor);
+
+    let query = `SELECT * FROM reviews WHERE provider_id = $1`;
+    if (cursor) {
+      query += ` AND (created_at, id) < ($${paramCount}, $${paramCount + 1})`;
+      values.push(cursor.createdAt, cursor.id);
+      paramCount += 2;
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT $${paramCount}`;
+    values.push(limit);
+
+    const result = await pool.query(query, values);
+    const items = result.rows.map((row) => this.mapRowToReview(row));
+    const nextCursor = getNextCursor(
+      items,
+      (r) => r.id,
+      (r) => r.createdAt
     );
 
-    return result.rows.map((row) => this.mapRowToReview(row));
+    return { items, nextCursor };
   }
 
   /**
