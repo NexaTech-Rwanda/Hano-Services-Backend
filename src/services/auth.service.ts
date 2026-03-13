@@ -119,10 +119,9 @@ export class AuthService {
 
     const message = `Your HanoServices verification code is: ${code}. It expires in ${config.otp.expiryMinutes} minutes.`;
 
-    // In development, log OTP to console for easier testing
-    if (config.nodeEnv === 'development') {
-      console.log(`OTP for ${phone}: ${code}`);
-    }
+    // In development, normally we would log OTP to console for easier testing,
+    // but security audit requested we disable this to prevent leaks.
+    // If testing locally, rely on actual SMS or a test test-specific mock.
 
     // Send via SMS (best-effort; log errors but don't expose them to users)
     try {

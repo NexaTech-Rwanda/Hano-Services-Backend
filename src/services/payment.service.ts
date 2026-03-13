@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { config } from '../config/config';
-import crypto from 'crypto';
+import { logError } from '../utils/logger';
 
 export enum PaymentChannel {
   MTN_MOMO = 'mtn_momo',
@@ -310,22 +310,16 @@ export class PaymentService {
    * Flutterwave v4 sends a hash in the 'verif-hash' header
    * Documentation: https://developer.flutterwave.com/docs/webhooks
    */
-  static verifyWebhookSignature(
-    payload: string,
-    signature: string
-  ): boolean {
-    if (!config.payments.flutterwave.secretHash) {
-      console.warn('[PaymentService] FLUTTERWAVE_SECRET_HASH not set, skipping signature verification');
-      return true; // Allow if not configured (for development)
+  static verifyWebhookSignature(_payload: string, signature: string): boolean {
+    const secretHash = config.payments.flutterwave.secretHash;
+    
+    // Security Fix: Always require the hash to be set in environment
+    if (!secretHash) {
+      logError('FLUTTERWAVE_SECRET_HASH is not set. Webhook verification failing closed to prevent fake events.', 'PaymentService.verifyWebhookSignature');
+      return false;
     }
 
-    // Flutterwave uses SHA512 HMAC with the secret hash
-    const hash = crypto
-      .createHmac('sha512', config.payments.flutterwave.secretHash)
-      .update(payload)
-      .digest('hex');
-
-    return hash === signature;
+    // Flutterwave sends the signature in the verif-hash header
+    return signature === secretHash;
   }
 }
-

@@ -8,10 +8,25 @@ import { swaggerSpec } from "./config/swagger";
 
 const app: Express = express();
 
+// HTTPS Enforcement (Redirect or Block non-HTTPS in production)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (config.nodeEnv === 'production') {
+    // Check if the request came via HTTPS (often set by reverse proxies like NGINX/Heroku/Render)
+    if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+      return next();
+    }
+    // Block HTTP requests in production
+    return res.status(403).json({
+      error: 'Insecure connection. Please use HTTPS.'
+    });
+  }
+  next();
+});
+
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: config.cors.origin,
+  origin: config.nodeEnv === 'production' && config.cors.origin?.length ? config.cors.origin : '*',
   credentials: true,
 }));
 
@@ -110,15 +125,23 @@ app.get("/api", (_req: Request, res: Response) => {
   });
 });
 
-// Swagger documentation
-app.use(
-  "/api-docs",
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, {
+// Swagger documentation (protected in production)
+const setupSwagger = () => {
+  const options = {
     customCss: ".swagger-ui .topbar { display: none }",
     customSiteTitle: "HanoServices API Documentation",
-  }),
-);
+  };
+  return swaggerUi.setup(swaggerSpec, options);
+};
+
+// Simple middleware to block public swagger in production
+app.use('/api-docs', (req: Request, res: Response, next: NextFunction) => {
+  if (config.nodeEnv === 'production') {
+    // You could put real admin Auth here, but rejecting outright is safer for now
+    return res.status(403).json({ error: 'Swagger UI is disabled in production.' });
+  }
+  next();
+}, swaggerUi.serve, setupSwagger());
 
 // Import routes
 import authRoutes from './routes/auth.routes';
