@@ -363,4 +363,41 @@ export class UserController {
       }
     },
   ];
+
+  /**
+   * Update notification preferences
+   * PATCH /api/users/preferences
+   */
+  static updatePreferences = [
+    validate([
+      body('emailNotifications').optional().isBoolean().withMessage('emailNotifications must be boolean'),
+      body('smsNotifications').optional().isBoolean().withMessage('smsNotifications must be boolean'),
+      body('pushNotifications').optional().isBoolean().withMessage('pushNotifications must be boolean'),
+    ]),
+    async (req: AuthRequest, res: Response) => {
+      try {
+        const userId = req.userId!;
+        const { emailNotifications, smsNotifications, pushNotifications } = req.body;
+
+        const updatedUser = await UserModel.updatePreferences(userId, {
+          emailNotifications,
+          smsNotifications,
+          pushNotifications,
+        });
+
+        console.log(`Updated preferences for user ID ${userId} successfully`);
+
+        return res.json({
+          status: 'success',
+          data: updatedUser,
+        });
+      } catch (error: any) {
+        logError(error.message, 'UserController.updatePreferences');
+        return res.status(400).json({
+          status: 'error',
+          message: error.message,
+        });
+      }
+    },
+  ];
 }

@@ -34,6 +34,10 @@ export interface User {
   isPhoneVerified: boolean;
   photo?: string;
   preferredContactMethod?: 'phone' | 'email' | 'whatsapp' | 'sms';
+  lastLogin?: Date;
+  emailNotifications?: boolean;
+  smsNotifications?: boolean;
+  pushNotifications?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

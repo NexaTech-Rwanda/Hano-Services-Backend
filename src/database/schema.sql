@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255),
     role VARCHAR(20) NOT NULL CHECK (role IN ('customer', 'provider', 'admin')),
     is_phone_verified BOOLEAN DEFAULT FALSE,
+    last_login TIMESTAMP,
+    email_notifications BOOLEAN DEFAULT TRUE,
+    sms_notifications BOOLEAN DEFAULT TRUE,
+    push_notifications BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

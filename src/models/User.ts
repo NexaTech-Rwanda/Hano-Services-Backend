@@ -127,6 +127,55 @@ export class UserModel {
   }
 
   /**
+   * Update active user preferences
+   */
+  static async updatePreferences(
+    id: string,
+    prefs: {
+      emailNotifications?: boolean;
+      smsNotifications?: boolean;
+      pushNotifications?: boolean;
+    }
+  ): Promise<User | null> {
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    if (prefs.emailNotifications !== undefined) {
+      updates.push(`email_notifications = $${paramCount++}`);
+      values.push(prefs.emailNotifications);
+    }
+    if (prefs.smsNotifications !== undefined) {
+      updates.push(`sms_notifications = $${paramCount++}`);
+      values.push(prefs.smsNotifications);
+    }
+    if (prefs.pushNotifications !== undefined) {
+      updates.push(`push_notifications = $${paramCount++}`);
+      values.push(prefs.pushNotifications);
+    }
+
+    if (updates.length === 0) return this.findById(id);
+
+    values.push(id);
+    const result = await pool.query(
+      `UPDATE users
+       SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $${paramCount}
+       RETURNING *`,
+      values
+    );
+
+    return result.rows.length ? this.mapRowToUser(result.rows[0]) : null;
+  }
+
+  /**
+   * Record the last login timestamp
+   */
+  static async updateLastLogin(id: string): Promise<void> {
+    await pool.query('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1', [id]);
+  }
+
+  /**
    * Update user password
    */
   static async updatePassword(id: string, newPassword: string): Promise<void> {
@@ -173,6 +222,10 @@ export class UserModel {
       isPhoneVerified: row.is_phone_verified,
       photo: row.photo,
       preferredContactMethod: row.preferred_contact_method,
+      lastLogin: row.last_login,
+      emailNotifications: row.email_notifications !== false,
+      smsNotifications: row.sms_notifications !== false,
+      pushNotifications: row.push_notifications !== false,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

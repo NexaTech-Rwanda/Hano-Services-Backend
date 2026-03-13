@@ -26,4 +26,7 @@ router.patch('/provider-profile', authenticate, UserController.updateProviderPro
 // Track user location
 router.post('/location', authenticate, UserController.trackLocation);
 
+// Update notification preferences
+router.patch('/preferences', authenticate, UserController.updatePreferences);
+
 export default router;

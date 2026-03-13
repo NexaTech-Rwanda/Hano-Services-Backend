@@ -18,6 +18,10 @@ export interface AuthTokens {
     email?: string;
     role: UserRole;
     isPhoneVerified: boolean;
+    lastLogin?: Date;
+    emailNotifications?: boolean;
+    smsNotifications?: boolean;
+    pushNotifications?: boolean;
   };
 }
 
@@ -88,6 +92,10 @@ export class AuthService {
           email: user.email,
           role: user.role,
           isPhoneVerified: user.isPhoneVerified,
+          lastLogin: user.lastLogin,
+          emailNotifications: user.emailNotifications,
+          smsNotifications: user.smsNotifications,
+          pushNotifications: user.pushNotifications,
         },
       };
     } catch (error: any) {
@@ -165,6 +173,7 @@ export class AuthService {
       throw new Error('Invalid credentials');
     }
 
+    await UserModel.updateLastLogin(user.id);
     const accessToken = this.generateToken(user.id, user.role);
     const refreshToken = await this.generateRefreshToken(user.id);
 
@@ -178,6 +187,10 @@ export class AuthService {
         email: user.email,
         role: user.role,
         isPhoneVerified: user.isPhoneVerified,
+        lastLogin: new Date(),
+        emailNotifications: user.emailNotifications,
+        smsNotifications: user.smsNotifications,
+        pushNotifications: user.pushNotifications,
       },
     };
   }
@@ -200,6 +213,8 @@ export class AuthService {
     if (!user.isPhoneVerified) {
       await UserModel.verifyPhone(user.id);
     }
+    
+    await UserModel.updateLastLogin(user.id);
 
     const accessToken = this.generateToken(user.id, user.role);
     const refreshToken = await this.generateRefreshToken(user.id);
@@ -214,6 +229,10 @@ export class AuthService {
         email: user.email,
         role: user.role,
         isPhoneVerified: true,
+        lastLogin: new Date(),
+        emailNotifications: user.emailNotifications,
+        smsNotifications: user.smsNotifications,
+        pushNotifications: user.pushNotifications,
       },
     };
   }
