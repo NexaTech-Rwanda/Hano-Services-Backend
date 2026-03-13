@@ -243,57 +243,60 @@ export class PaymentService {
     }
 
     try {
-      // Get access token
-      const accessToken = await this.getAccessToken();
-
       // Generate unique transaction reference
       const txRef = `HANOSERVICES_${payload.customerId}_${Date.now()}`;
-      const traceId = `trace_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       // Use callback URL from payload or config
       const callbackUrl = payload.callbackUrl || config.payments.flutterwave.callbackUrl;
 
-      // Flutterwave v4 API - Card payment
-      // Step 1: Create customer
-      const customerResponse = await axios.post(
-        `${config.payments.flutterwave.apiUrl}/customers`,
+      // Ensure secret key is available for v3 API
+      const secretKey = config.payments.flutterwave.secretKey;
+      if (!secretKey) {
+        throw new Error('FLUTTERWAVE_SECRET_KEY is required for card payments via standard checkout');
+      }
+
+      // Use Flutterwave v3 standard checkout API to generate a payment link
+      const response = await axios.post(
+        'https://api.flutterwave.com/v3/payments',
         {
-          email: payload.email,
-          phone: payload.phoneNumber
-            ? {
-                country_code: '250',
-                number: payload.phoneNumber.replace(/[^\d]/g, '').substring(3),
-              }
-            : undefined,
-          name: {
-            first: payload.customerId.split('_')[0] || 'Customer',
-            last: payload.customerId.split('_')[1] || 'User',
+          tx_ref: txRef,
+          amount: payload.amount,
+          currency: payload.currency || 'RWF',
+          redirect_url: callbackUrl,
+          meta: {
+            customer_id: payload.customerId,
+            provider_id: payload.providerId,
+          },
+          customer: {
+            email: payload.email,
+            phonenumber: payload.phoneNumber || undefined,
+            name: `${payload.customerId.split('_')[0]} ${payload.customerId.split('_')[1] || ''}`.trim() || 'Customer',
+          },
+          customizations: {
+            title: 'HanoServices',
+            description: payload.description || 'Payment for services',
+            logo: config.payments.flutterwave.logoUrl || 'https://st2.depositphotos.com/4403291/7418/v/450/depositphotos_74189661-stock-illustration-online-shop-log.jpg',
           },
         },
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${secretKey}`,
             'Content-Type': 'application/json',
-            'X-Trace-Id': traceId,
           },
         }
       );
 
-      const customerId = customerResponse.data.data?.id;
-      if (!customerId) {
-        throw new Error('Failed to create customer');
+      const { status, message, data } = response.data;
+
+      if (status === 'success') {
+        return {
+          providerReference: txRef,
+          status: 'pending',
+          checkoutUrl: data.link, // Real Flutterwave hosted payment page URL
+        };
       }
 
-      // Step 2: Create charge (card payment requires card details from frontend)
-      // For now, we'll return a payment link that can be used with Flutterwave's hosted payment page
-      // In production, you'd collect card details securely and create a payment method first
-      return {
-        providerReference: txRef,
-        status: 'pending',
-        checkoutUrl: callbackUrl, // Frontend should redirect to Flutterwave payment page
-        // Note: For full card integration, you need to implement card collection
-        // and encryption on the frontend, then create payment method and charge
-      };
+      throw new Error(message || 'Failed to generate payment link');
     } catch (error: any) {
       console.error('[PaymentService] Flutterwave card payment error:', error.response?.data || error.message);
       throw new Error(
