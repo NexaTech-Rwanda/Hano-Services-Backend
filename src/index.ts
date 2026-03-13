@@ -1,10 +1,10 @@
-import express, { Express, Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import swaggerUi from 'swagger-ui-express';
-import { config } from './config/config';
-import pool from './config/database';
-import { swaggerSpec } from './config/swagger';
+import express, { Express, Request, Response, NextFunction } from "express";
+import cors from "cors";
+import helmet from "helmet";
+import swaggerUi from "swagger-ui-express";
+import { config } from "./config/config";
+import pool from "./config/database";
+import { swaggerSpec } from "./config/swagger";
 
 const app: Express = express();
 
@@ -65,12 +65,12 @@ app.use(express.urlencoded({ extended: true }));
  *                   format: date-time
  */
 // Health check endpoint
-app.get('/health', async (_req: Request, res: Response) => {
+app.get("/health", async (_req: Request, res: Response) => {
   try {
-    await pool.query('SELECT 1');
+    await pool.query("SELECT 1");
     return res.status(200).json({
-      status: 'ok',
-      message: 'HanoServices API is running',
+      status: "ok",
+      message: "HanoServices API is running",
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -103,18 +103,22 @@ app.get('/health', async (_req: Request, res: Response) => {
  *                   type: string
  *                   example: "1.0.0"
  */
-app.get('/api', (_req: Request, res: Response) => {
+app.get("/api", (_req: Request, res: Response) => {
   return res.json({
-    message: 'HanoServices API',
-    version: '1.0.0',
+    message: "HanoServices API",
+    version: "1.0.0",
   });
 });
 
 // Swagger documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'HanoServices API Documentation',
-}));
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    customCss: ".swagger-ui .topbar { display: none }",
+    customSiteTitle: "HanoServices API Documentation",
+  }),
+);
 
 // Import routes
 import authRoutes from './routes/auth.routes';
@@ -143,18 +147,19 @@ ReminderService.init();
 
 // Error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Error:', err);
+  console.error("Error:", err);
   return res.status(500).json({
-    status: 'error',
-    message: config.nodeEnv === 'production' ? 'Internal server error' : err.message,
+    status: "error",
+    message:
+      config.nodeEnv === "production" ? "Internal server error" : err.message,
   });
 });
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
   return res.status(404).json({
-    status: 'error',
-    message: 'Route not found',
+    status: "error",
+    message: "Route not found",
   });
 });
 
