@@ -11,7 +11,7 @@ services:
       - DB_HOST=postgres
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379
-      - NODE_ENV=development
+      - NODE_ENV=production
     depends_on:
       postgres:
         condition: service_healthy

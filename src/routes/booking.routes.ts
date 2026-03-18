@@ -199,6 +199,9 @@ router.get('/my', ...BookingController.getMyBookings);
  */
 router.get('/provider', ...BookingController.getProviderBookings);
 
+// Get a single booking (customer/provider participant only)
+router.get('/:id', ...BookingController.getById);
+
 /**
  * @swagger
  * /api/bookings/{id}/accept:
@@ -298,6 +301,12 @@ router.patch('/:id/accept', ...BookingController.accept);
  *                   example: "Booking is not in a pending state"
  */
 router.patch('/:id/decline', ...BookingController.decline);
+
+// Customer cancels their own booking
+router.patch('/:id/cancel', ...BookingController.cancel);
+
+// Provider marks accepted booking as completed
+router.patch('/:id/complete', ...BookingController.complete);
 
 /**
  * @swagger

@@ -1,11 +1,7 @@
 #!/bin/bash
-# scripts/backup.sh
-# Simple shell script to dump the PostgreSQL database and compress it.
-# Schedule this with cron, e.g., `0 2 * * * /path/to/backup.sh`
-
 set -e
 
-DB_CONTAINER_NAME="serve-db"
+DB_CONTAINER_NAME="hano"
 DB_USER="postgres"
 DB_NAME="hano_db"
 BACKUP_DIR="./backups"

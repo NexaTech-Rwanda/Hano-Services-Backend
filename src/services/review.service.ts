@@ -1,5 +1,6 @@
 import { ReviewModel } from '../models/Review';
 import { BookingModel } from '../models/Booking';
+import { ProviderModel } from '../models/Provider';
 import { BookingStatus, UserRole } from '../types';
 
 export class ReviewService {
@@ -73,8 +74,11 @@ export class ReviewService {
     if (role === UserRole.CUSTOMER && review.customerId !== userId) {
       throw new Error('Unauthorized to view this review');
     }
-    if (role === UserRole.PROVIDER && review.providerId !== userId) {
-      throw new Error('Unauthorized to view this review');
+    if (role === UserRole.PROVIDER) {
+      const provider = await ProviderModel.findByUserId(userId);
+      if (!provider || review.providerId !== provider.id) {
+        throw new Error('Unauthorized to view this review');
+      }
     }
 
     return review;

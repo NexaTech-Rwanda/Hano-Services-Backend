@@ -73,14 +73,19 @@ export class ReviewModel {
     let paramCount = 2;
     const cursor = decodeCursor(options.cursor);
 
-    let query = `SELECT * FROM reviews WHERE provider_id = $1`;
+    let query = `
+      SELECT r.*, u.username AS customer_name
+      FROM reviews r
+      LEFT JOIN users u ON r.customer_id = u.id
+      WHERE r.provider_id = $1
+    `;
     if (cursor) {
-      query += ` AND (created_at, id) < ($${paramCount}, $${paramCount + 1})`;
+      query += ` AND (r.created_at, r.id) < ($${paramCount}, $${paramCount + 1})`;
       values.push(cursor.createdAt, cursor.id);
       paramCount += 2;
     }
 
-    query += ` ORDER BY created_at DESC LIMIT $${paramCount}`;
+    query += ` ORDER BY r.created_at DESC LIMIT $${paramCount}`;
     values.push(limit);
 
     const result = await pool.query(query, values);
@@ -111,6 +116,7 @@ export class ReviewModel {
       rating: row.rating,
       comment: row.comment,
       proofImages: row.proof_images || [],
+      customerName: row.customer_name || undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

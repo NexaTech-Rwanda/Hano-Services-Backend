@@ -207,16 +207,18 @@ export class ProviderModel {
     const result = await pool.query(
       `SELECT 
         p.*,
+        u.phone as phone,
         sc.name as category_name,
         COALESCE(AVG(r.rating), 0) as average_rating,
         COUNT(DISTINCT r.id) as total_reviews,
         COUNT(DISTINCT pf.id) as portfolio_count
       FROM providers p
+      LEFT JOIN users u ON p.user_id = u.id
       LEFT JOIN service_categories sc ON p.service_category_id = sc.id
       LEFT JOIN reviews r ON p.id = r.provider_id
       LEFT JOIN provider_portfolios pf ON p.id = pf.provider_id
       WHERE p.id = $1
-      GROUP BY p.id, sc.name`,
+      GROUP BY p.id, u.phone, sc.name`,
       [id]
     );
 
@@ -260,6 +262,7 @@ export class ProviderModel {
     let query = `
       SELECT 
         p.*,
+        u.phone as phone,
         sc.name as category_name,
         COALESCE(AVG(r.rating), 0) as average_rating,
         COUNT(DISTINCT r.id) as total_reviews,
@@ -274,6 +277,7 @@ export class ProviderModel {
 
     query += `
       FROM providers p
+      LEFT JOIN users u ON p.user_id = u.id
       LEFT JOIN service_categories sc ON p.service_category_id = sc.id
       LEFT JOIN reviews r ON p.id = r.provider_id
       LEFT JOIN provider_portfolios pf ON p.id = pf.provider_id
@@ -323,7 +327,7 @@ export class ProviderModel {
       query += ' AND ' + conditions.join(' AND ');
     }
 
-    query += ' GROUP BY p.id, sc.name';
+    query += ' GROUP BY p.id, u.phone, sc.name';
 
     // Filter by rating (HAVING clause)
     if (filters.minRating !== undefined) {
@@ -541,6 +545,7 @@ export class ProviderModel {
       id: row.id,
       userId: row.user_id,
       name: row.name,
+      phone: row.phone,
       photo: row.photo,
       serviceCategoryId: row.service_category_id,
       priceRangeMin: row.price_range_min

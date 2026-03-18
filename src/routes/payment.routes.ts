@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { PaymentController } from '../controllers/payment.controller';
 import { body } from 'express-validator';
 import { PaymentChannel } from '../services/payment.service';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -142,6 +143,39 @@ router.post('/mtn/callback', PaymentController.mtnCallback);
  * @deprecated
  */
 router.post('/airtel/callback', PaymentController.airtelCallback);
+
+/**
+ * @swagger
+ * /api/payments/my:
+ *   get:
+ *     summary: Get current user's payment history
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [pending, successful, failed]
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *     responses:
+ *       200:
+ *         description: Payment history for current user
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/my', authenticate, PaymentController.getMyPayments);
 
 /**
  * @swagger

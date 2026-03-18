@@ -1,6 +1,7 @@
 import { ProviderModel, ProviderWithCategory } from '../models/Provider';
 import { ProviderPortfolioModel } from '../models/ProviderPortfolio';
 import { VerificationRequestModel } from '../models/VerificationRequest';
+import pool from '../config/database';
 import {
   ProviderAvailability,
   VerificationStatus,
@@ -278,19 +279,19 @@ export class ProviderService {
       // Count bookings by status
       pool.query(
         'SELECT status, COUNT(*)::int AS count FROM bookings WHERE provider_id = $1 GROUP BY status',
-        [userId]
+        [provider.id]
       ),
       // Calculate total earnings from successful payments
       pool.query(
         `SELECT COALESCE(SUM(amount), 0)::float AS total 
          FROM payments 
          WHERE provider_id = $1 AND status = 'successful'`,
-        [userId]
+        [provider.id]
       ),
       // Get current average rating
       pool.query(
         'SELECT COALESCE(AVG(rating), 0)::float AS avg_rating FROM reviews WHERE provider_id = $1',
-        [userId]
+        [provider.id]
       ),
     ]);
 

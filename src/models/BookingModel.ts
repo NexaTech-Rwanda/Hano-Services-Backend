@@ -24,7 +24,7 @@ export class BookingModel {
         customer_id, provider_id, service_category_id,
         scheduled_date, description, latitude, longitude, address, notes, image_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`,
       [
         customerId,
@@ -48,6 +48,31 @@ export class BookingModel {
    */
   static async findById(id: string): Promise<Booking | null> {
     const result = await pool.query('SELECT * FROM bookings WHERE id = $1', [id]);
+    return result.rows.length ? this.mapRowToBooking(result.rows[0]) : null;
+  }
+
+  /**
+   * Find booking by ID with related names/phones
+   */
+  static async findByIdWithDetails(id: string): Promise<Booking | null> {
+    const result = await pool.query(
+      `SELECT
+        b.*,
+        p.name AS provider_name,
+        sc.name AS provider_category,
+        cu.username AS customer_name,
+        pu.phone AS provider_phone,
+        cu.phone AS customer_phone
+      FROM bookings b
+      JOIN providers p ON b.provider_id = p.id
+      LEFT JOIN service_categories sc ON b.service_category_id = sc.id
+      LEFT JOIN users cu ON b.customer_id = cu.id
+      LEFT JOIN users pu ON p.user_id = pu.id
+      WHERE b.id = $1
+      LIMIT 1`,
+      [id]
+    );
+
     return result.rows.length ? this.mapRowToBooking(result.rows[0]) : null;
   }
 
@@ -133,10 +158,10 @@ export class BookingModel {
   ): Promise<Booking[]> {
     const values: any[] = [customerId];
     let paramCount = 2;
-    let whereClause = 'WHERE customer_id = $1';
+    let whereClause = 'WHERE b.customer_id = $1';
 
     if (filters?.status) {
-      whereClause += ` AND status = $${paramCount++}`;
+      whereClause += ` AND b.status = $${paramCount++}`;
       values.push(filters.status);
     }
 
@@ -144,9 +169,20 @@ export class BookingModel {
     const offset = filters?.offset && filters.offset >= 0 ? filters.offset : 0;
 
     const result = await pool.query(
-      `SELECT * FROM bookings
+      `SELECT
+         b.*,
+         p.name AS provider_name,
+         sc.name AS provider_category,
+         cu.username AS customer_name,
+         pu.phone AS provider_phone,
+         cu.phone AS customer_phone
+       FROM bookings b
+       JOIN providers p ON b.provider_id = p.id
+       LEFT JOIN service_categories sc ON b.service_category_id = sc.id
+       LEFT JOIN users cu ON b.customer_id = cu.id
+       LEFT JOIN users pu ON p.user_id = pu.id
        ${whereClause}
-       ORDER BY created_at DESC
+       ORDER BY b.created_at DESC
        LIMIT $${paramCount++} OFFSET $${paramCount++}`,
       [...values, limit, offset]
     );
@@ -167,10 +203,10 @@ export class BookingModel {
   ): Promise<Booking[]> {
     const values: any[] = [providerId];
     let paramCount = 2;
-    let whereClause = 'WHERE provider_id = $1';
+    let whereClause = 'WHERE b.provider_id = $1';
 
     if (filters?.status) {
-      whereClause += ` AND status = $${paramCount++}`;
+      whereClause += ` AND b.status = $${paramCount++}`;
       values.push(filters.status);
     }
 
@@ -178,9 +214,20 @@ export class BookingModel {
     const offset = filters?.offset && filters.offset >= 0 ? filters.offset : 0;
 
     const result = await pool.query(
-      `SELECT * FROM bookings
+      `SELECT
+         b.*,
+         p.name AS provider_name,
+         sc.name AS provider_category,
+         cu.username AS customer_name,
+         pu.phone AS provider_phone,
+         cu.phone AS customer_phone
+       FROM bookings b
+       JOIN providers p ON b.provider_id = p.id
+       LEFT JOIN service_categories sc ON b.service_category_id = sc.id
+       LEFT JOIN users cu ON b.customer_id = cu.id
+       LEFT JOIN users pu ON p.user_id = pu.id
        ${whereClause}
-       ORDER BY created_at DESC
+       ORDER BY b.created_at DESC
        LIMIT $${paramCount++} OFFSET $${paramCount++}`,
       [...values, limit, offset]
     );
@@ -197,6 +244,9 @@ export class BookingModel {
   }
 
   private static mapRowToBooking(row: any): Booking {
+    const latitude = row.latitude != null ? parseFloat(row.latitude) : undefined;
+    const longitude = row.longitude != null ? parseFloat(row.longitude) : undefined;
+    const address = row.address ?? undefined;
     return {
       id: row.id,
       customerId: row.customer_id,
@@ -205,16 +255,24 @@ export class BookingModel {
       status: row.status,
       scheduledDate: row.scheduled_date,
       description: row.description,
+      latitude,
+      longitude,
+      address,
       location:
-        row.latitude && row.longitude
+        latitude != null && longitude != null
           ? {
-              latitude: parseFloat(row.latitude),
-              longitude: parseFloat(row.longitude),
-              address: row.address,
+              latitude,
+              longitude,
+              address,
             }
           : undefined,
       notes: row.notes,
       imageUrl: row.image_url,
+      providerName: row.provider_name ?? undefined,
+      providerCategory: row.provider_category ?? undefined,
+      customerName: row.customer_name ?? undefined,
+      providerPhone: row.provider_phone ?? undefined,
+      customerPhone: row.customer_phone ?? undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

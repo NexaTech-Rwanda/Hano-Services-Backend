@@ -46,6 +46,7 @@ export interface Provider {
   id: string;
   userId: string;
   name: string;
+  phone?: string;
   photo?: string;
   serviceCategoryId: string;
   priceRangeMin?: number;
@@ -91,6 +92,9 @@ export interface Booking {
   status: BookingStatus;
   scheduledDate?: Date;
   description?: string;
+  latitude?: number;
+  longitude?: number;
+  address?: string;
   location?: {
     latitude: number;
     longitude: number;
@@ -98,6 +102,11 @@ export interface Booking {
   };
   notes?: string;
   imageUrl?: string;
+  providerName?: string;
+  providerCategory?: string;
+  customerName?: string;
+  providerPhone?: string;
+  customerPhone?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -110,6 +119,7 @@ export interface Review {
   rating: number;
   comment?: string;
   proofImages?: string[];
+  customerName?: string;
   createdAt: Date;
   updatedAt: Date;
 }

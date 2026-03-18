@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { PaymentService, PaymentChannel } from '../services/payment.service';
 import { PaymentModel } from '../models/Payment';
+import { ProviderModel } from '../models/Provider';
+import { AuthRequest } from '../middleware/auth';
+import { UserRole } from '../types';
 import { logError } from '../utils/logger';
 
 export class PaymentController {
@@ -220,6 +223,72 @@ export class PaymentController {
       logError(error.message, 'PaymentController.getPaymentStatus');
       return res.status(500).json({
         error: error.message || 'Failed to get payment status',
+      });
+    }
+  }
+
+  /**
+   * Get current user's payments
+   * GET /api/payments/my
+   */
+  static async getMyPayments(req: AuthRequest, res: Response): Promise<Response> {
+    try {
+      const userId = req.userId;
+      const role = req.userRole;
+
+      if (!userId || !role) {
+        return res.status(401).json({
+          status: 'error',
+          message: 'Unauthorized',
+        });
+      }
+
+      const statusParam = req.query.status as string | undefined;
+      const status =
+        statusParam && ['pending', 'successful', 'failed'].includes(statusParam)
+          ? (statusParam as 'pending' | 'successful' | 'failed')
+          : undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+      const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : undefined;
+
+      let payments;
+      if (role === UserRole.PROVIDER) {
+        const provider = await ProviderModel.findByUserId(userId);
+        if (!provider) {
+          return res.status(404).json({
+            status: 'error',
+            message: 'Provider profile not found',
+          });
+        }
+
+        payments = await PaymentModel.findByProviderId(provider.id, {
+          status,
+          limit,
+          offset,
+        });
+      } else if (role === UserRole.CUSTOMER) {
+        payments = await PaymentModel.findByCustomerId(userId, {
+          status,
+          limit,
+          offset,
+        });
+      } else {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Unsupported role for payment history',
+        });
+      }
+
+      return res.status(200).json({
+        status: 'success',
+        data: payments,
+        count: payments.length,
+      });
+    } catch (error: any) {
+      logError(error.message, 'PaymentController.getMyPayments');
+      return res.status(500).json({
+        status: 'error',
+        message: error.message || 'Failed to fetch payments',
       });
     }
   }

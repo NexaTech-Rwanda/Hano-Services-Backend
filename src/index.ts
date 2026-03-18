@@ -135,12 +135,13 @@ const setupSwagger = () => {
 };
 
 // Simple middleware to block public swagger in production
-app.use('/api-docs', (req: Request, res: Response, next: NextFunction) => {
+app.use('/api-docs', (_req: Request, res: Response, next: NextFunction) => {
   if (config.nodeEnv === 'production') {
     // You could put real admin Auth here, but rejecting outright is safer for now
-    return res.status(403).json({ error: 'Swagger UI is disabled in production.' });
+    res.status(403).json({ error: 'Swagger UI is disabled in production.' });
+    return;
   }
-  next();
+  return next();
 }, swaggerUi.serve, setupSwagger());
 
 // Import routes

@@ -3,6 +3,7 @@ import { body, query, validationResult } from 'express-validator';
 import { BookingModel } from '../models/BookingModel';
 import { BookingService } from '../services/booking.service';
 import { WhatsappService } from '../services/whatsapp.service';
+import { ProviderModel } from '../models/Provider';
 import { authenticate, authorize } from '../middleware/auth';
 import { AuthRequest } from '../middleware/auth';
 import { UserRole, BookingStatus } from '../types';
@@ -26,6 +27,14 @@ const validate = (validations: any[]) => [
 ];
 
 export class BookingController {
+  private static async resolveProviderIdForUser(userId: string): Promise<string> {
+    const provider = await ProviderModel.findByUserId(userId);
+    if (!provider) {
+      throw new Error('Provider profile not found');
+    }
+    return provider.id;
+  }
+
   /**
    * Customer creates a booking request
    * POST /api/bookings
@@ -127,8 +136,9 @@ export class BookingController {
     async (req: AuthRequest, res: Response) => {
       try {
         const userId = req.userId!;
+        const providerId = await BookingController.resolveProviderIdForUser(userId);
         const { status, limit, offset } = req.query;
-        const bookings = await BookingModel.findByProviderId(userId, {
+        const bookings = await BookingModel.findByProviderId(providerId, {
           status: status as BookingStatus | undefined,
           limit: limit ? parseInt(limit as string, 10) : undefined,
           offset: offset ? parseInt(offset as string, 10) : undefined,
@@ -160,6 +170,7 @@ export class BookingController {
     async (req: AuthRequest, res: Response) => {
       try {
         const userId = req.userId!;
+        const providerId = await BookingController.resolveProviderIdForUser(userId);
         const bookingId = req.params.id;
 
         const booking = await BookingModel.findById(bookingId);
@@ -170,7 +181,7 @@ export class BookingController {
             message: 'Booking not found',
           });
         }
-        if (booking.providerId !== userId) {
+        if (booking.providerId !== providerId) {
           logError('You can only accept bookings assigned to you', 'BookingController.accept');
           return res.status(403).json({
             status: 'error',
@@ -215,6 +226,7 @@ export class BookingController {
     async (req: AuthRequest, res: Response) => {
       try {
         const userId = req.userId!;
+        const providerId = await BookingController.resolveProviderIdForUser(userId);
         const bookingId = req.params.id;
 
         const booking = await BookingModel.findById(bookingId);
@@ -225,7 +237,7 @@ export class BookingController {
             message: 'Booking not found',
           });
         }
-        if (booking.providerId !== userId) {
+        if (booking.providerId !== providerId) {
           logError('You can only decline bookings assigned to you', 'BookingController.decline');
           return res.status(403).json({
             status: 'error',
@@ -264,38 +276,199 @@ export class BookingController {
  * Get chat messages for a booking (removed – WhatsApp only)
  * GET /api/bookings/:id/chat
  */
-static getChat = [
-  authenticate,
-  validate([
-    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
-    query('offset').optional().isInt({ min: 0 }).withMessage('Offset must be non-negative'),
-  ]),
-  (_req: AuthRequest, res: Response) => {
-    logError('Chat functionality removed. Use WhatsApp via /api/bookings/:id/whatsapp', 'BookingController.getChat');
-    return res.status(410).json({
-      status: 'error',
-      message: 'Chat functionality removed. Use WhatsApp via /api/bookings/:id/whatsapp',
-    });
-  },
-];
+  /**
+   * Get a booking by ID for participants
+   * GET /api/bookings/:id
+   */
+  static getById = [
+    authenticate,
+    async (req: AuthRequest, res: Response) => {
+      try {
+        const userId = req.userId!;
+        const role = req.userRole!;
+        const bookingId = req.params.id;
+
+        const booking = await BookingModel.findByIdWithDetails(bookingId);
+        if (!booking) {
+          return res.status(404).json({
+            status: 'error',
+            message: 'Booking not found',
+          });
+        }
+
+        if (role === UserRole.CUSTOMER) {
+          if (booking.customerId !== userId) {
+            return res.status(403).json({
+              status: 'error',
+              message: 'You are not part of this booking',
+            });
+          }
+        } else if (role === UserRole.PROVIDER) {
+          const providerId = await BookingController.resolveProviderIdForUser(userId);
+          if (booking.providerId !== providerId) {
+            return res.status(403).json({
+              status: 'error',
+              message: 'You are not part of this booking',
+            });
+          }
+        } else {
+          return res.status(403).json({
+            status: 'error',
+            message: 'Unauthorized role for booking access',
+          });
+        }
+
+        return res.json({
+          status: 'success',
+          data: booking,
+        });
+      } catch (error: any) {
+        logError(error.message, 'BookingController.getById');
+        return res.status(500).json({
+          status: 'error',
+          message: error.message,
+        });
+      }
+    },
+  ];
+
+  /**
+   * Customer cancels a booking
+   * PATCH /api/bookings/:id/cancel
+   */
+  static cancel = [
+    authenticate,
+    authorize('customer' as UserRole),
+    async (req: AuthRequest, res: Response) => {
+      try {
+        const userId = req.userId!;
+        const bookingId = req.params.id;
+
+        const booking = await BookingModel.findById(bookingId);
+        if (!booking) {
+          return res.status(404).json({
+            status: 'error',
+            message: 'Booking not found',
+          });
+        }
+
+        if (booking.customerId !== userId) {
+          return res.status(403).json({
+            status: 'error',
+            message: 'You can only cancel your own bookings',
+          });
+        }
+
+        if (booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.COMPLETED) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Booking cannot be cancelled in its current state',
+          });
+        }
+
+        const updated = await BookingModel.update(bookingId, {
+          status: BookingStatus.CANCELLED,
+        });
+
+        return res.json({
+          status: 'success',
+          data: updated,
+        });
+      } catch (error: any) {
+        logError(error.message, 'BookingController.cancel');
+        return res.status(500).json({
+          status: 'error',
+          message: error.message,
+        });
+      }
+    },
+  ];
+
+  /**
+   * Provider marks booking as completed
+   * PATCH /api/bookings/:id/complete
+   */
+  static complete = [
+    authenticate,
+    authorize('provider' as UserRole),
+    async (req: AuthRequest, res: Response) => {
+      try {
+        const userId = req.userId!;
+        const providerId = await BookingController.resolveProviderIdForUser(userId);
+        const bookingId = req.params.id;
+
+        const booking = await BookingModel.findById(bookingId);
+        if (!booking) {
+          return res.status(404).json({
+            status: 'error',
+            message: 'Booking not found',
+          });
+        }
+
+        if (booking.providerId !== providerId) {
+          return res.status(403).json({
+            status: 'error',
+            message: 'You can only complete bookings assigned to you',
+          });
+        }
+
+        if (booking.status !== BookingStatus.ACCEPTED) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'Only accepted bookings can be marked as completed',
+          });
+        }
+
+        const updated = await BookingModel.update(bookingId, {
+          status: BookingStatus.COMPLETED,
+        });
+
+        return res.json({
+          status: 'success',
+          data: updated,
+        });
+      } catch (error: any) {
+        logError(error.message, 'BookingController.complete');
+        return res.status(500).json({
+          status: 'error',
+          message: error.message,
+        });
+      }
+    },
+  ];
+
+  static getChat = [
+    authenticate,
+    validate([
+      query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
+      query('offset').optional().isInt({ min: 0 }).withMessage('Offset must be non-negative'),
+    ]),
+    (_req: AuthRequest, res: Response) => {
+      logError('Chat functionality removed. Use WhatsApp via /api/bookings/:id/whatsapp', 'BookingController.getChat');
+      return res.status(410).json({
+        status: 'error',
+        message: 'Chat functionality removed. Use WhatsApp via /api/bookings/:id/whatsapp',
+      });
+    },
+  ];
 
 /**
  * Send a chat message in a booking (removed – WhatsApp only)
  * POST /api/bookings/:id/chat
  */
-static sendMessage = [
-  authenticate,
-  validate([
-    body('content').notEmpty().withMessage('Message content is required'),
-  ]),
-  (_req: AuthRequest, res: Response) => {
-    logError('Chat functionality removed. Use WhatsApp via /api/bookings/:id/whatsapp', 'BookingController.sendMessage');
-    return res.status(410).json({
-      status: 'error',
-      message: 'Chat functionality removed. Use WhatsApp via /api/bookings/:id/whatsapp',
-    });
-  },
-];
+  static sendMessage = [
+    authenticate,
+    validate([
+      body('content').notEmpty().withMessage('Message content is required'),
+    ]),
+    (_req: AuthRequest, res: Response) => {
+      logError('Chat functionality removed. Use WhatsApp via /api/bookings/:id/whatsapp', 'BookingController.sendMessage');
+      return res.status(410).json({
+        status: 'error',
+        message: 'Chat functionality removed. Use WhatsApp via /api/bookings/:id/whatsapp',
+      });
+    },
+  ];
 
   /**
    * Open WhatsApp chat for a booking (returns deep link)
@@ -316,21 +489,36 @@ static sendMessage = [
             message: 'Booking not found',
           });
         }
-        if (booking.customerId !== userId && booking.providerId !== userId) {
-          logError('You are not part of this booking', 'BookingController.openWhatsApp');
-          return res.status(403).json({
-            status: 'error',
-            message: 'You are not part of this booking',
-          });
+        let otherPartyPhone: string | null = null;
+
+        if (booking.customerId === userId) {
+          const providerPhoneQuery = await pool.query(
+            `SELECT u.phone
+             FROM providers p
+             JOIN users u ON p.user_id = u.id
+             WHERE p.id = $1
+             LIMIT 1`,
+            [booking.providerId]
+          );
+          otherPartyPhone = providerPhoneQuery.rows[0]?.phone || null;
+        } else {
+          const provider = await ProviderModel.findByUserId(userId);
+          if (!provider || provider.id !== booking.providerId) {
+            logError('You are not part of this booking', 'BookingController.openWhatsApp');
+            return res.status(403).json({
+              status: 'error',
+              message: 'You are not part of this booking',
+            });
+          }
+
+          const customerPhoneQuery = await pool.query(
+            'SELECT phone FROM users WHERE id = $1 LIMIT 1',
+            [booking.customerId]
+          );
+          otherPartyPhone = customerPhoneQuery.rows[0]?.phone || null;
         }
 
-        // Try to get the other party's WhatsApp number from user table
-        const otherUserQuery = await pool.query(
-          'SELECT phone FROM users WHERE id = $1',
-          [booking.customerId === userId ? booking.providerId : booking.customerId]
-        );
-
-        if (otherUserQuery.rows.length === 0 || !otherUserQuery.rows[0].phone) {
+        if (!otherPartyPhone) {
           logError('Could not retrieve contact number', 'BookingController.openWhatsApp');
           return res.status(400).json({
             status: 'error',
@@ -339,7 +527,7 @@ static sendMessage = [
         }
 
         const whatsappLink = WhatsappService.sendMessage(
-          otherUserQuery.rows[0].phone,
+          otherPartyPhone,
           `Hello! I have a question about our booking scheduled for ${booking.scheduledDate}.`
         );
 
