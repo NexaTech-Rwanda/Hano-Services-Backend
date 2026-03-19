@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'fs';
 import { join, resolve } from 'path';
 import pool from '../config/database';
+import { Client } from 'pg';
+import { config } from '../config/config';
 
 /**
  * Simple schema migration:
@@ -12,6 +14,38 @@ async function migrate() {
   try {
     console.log('Running database schema...\n');
 
+    // Step 1: Ensure database exists
+    const dbName = config.database.name || 'hano_db';
+    console.log(`Checking if database "${dbName}" exists...`);
+
+    const client = new Client({
+      host: config.database.host,
+      port: config.database.port,
+      user: config.database.user,
+      password: config.database.password,
+      database: 'postgres', // Connect to default postgres DB first
+    });
+
+    try {
+      await client.connect();
+      const checkDb = await client.query(`SELECT 1 FROM pg_database WHERE datname = $1`, [dbName]);
+
+      if (checkDb.rows.length === 0) {
+        console.log(`Database "${dbName}" not found. Creating it...`);
+        // Cannot use parameterized query for CREATE DATABASE
+        await client.query(`CREATE DATABASE "${dbName}"`);
+        console.log(`✓ Database "${dbName}" created successfully.`);
+      } else {
+        console.log(`✓ Database "${dbName}" already exists.`);
+      }
+    } catch (dbError) {
+      console.error('Warning: Could not check/create database automatically. Ensure it exists.');
+      // Proceed anyway, let the main migration handle the connection failure if it's fatal
+    } finally {
+      await client.end();
+    }
+
+    // Step 2: Apply schema
     const distSchemaPath = join(__dirname, 'schema.sql');
     const srcSchemaPath = resolve(process.cwd(), 'src', 'database', 'schema.sql');
     const schemaPath = existsSync(distSchemaPath) ? distSchemaPath : srcSchemaPath;
@@ -32,36 +66,5 @@ async function migrate() {
     process.exit(1);
   }
 }
-
-// For future: if you need a migration table later, uncomment below
-/*
-import { MigrationManager } from './migration-manager';
-async function migrateWithTracking() {
-  // First run base schema if needed
-  const distSchemaPath = join(__dirname, 'schema.sql');
-  const srcSchemaPath = resolve(process.cwd(), 'src', 'database', 'schema.sql');
-  const schemaPath = existsSync(distSchemaPath) ? distSchemaPath : srcSchemaPath;
-
-  if (existsSync(schemaPath)) {
-    const checkResult = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'users'
-      )
-    `);
-    if (!checkResult.rows[0].exists) {
-      console.log('Initializing database schema...');
-      const schema = readFileSync(schemaPath, 'utf-8');
-      await pool.query(schema);
-      console.log('✓ Base schema initialized\n');
-    }
-  }
-
-  // Run tracked migrations
-  const migrationManager = new MigrationManager();
-  await migrationManager.migrate();
-}
-*/
 
 migrate();
