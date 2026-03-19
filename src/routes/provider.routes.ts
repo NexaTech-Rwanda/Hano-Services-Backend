@@ -109,6 +109,79 @@ router.get('/search', ProviderController.search);
 
 /**
  * @swagger
+ * /api/providers/me/profile:
+ *   get:
+ *     summary: Get current user's provider profile (Provider only)
+ *     tags: [Providers]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Provider profile details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   $ref: '#/components/schemas/Provider'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *       404:
+ *         description: Provider profile not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/me/profile', authenticate, authorize(UserRole.PROVIDER), ProviderController.getMyProfile);
+
+/**
+ * @swagger
+ * /api/providers/me/stats:
+ *   get:
+ *     summary: Get current user's provider statistics (Provider only)
+ *     tags: [Providers]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Provider statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     jobsDone:
+ *                       type: integer
+ *                     pendingJobs:
+ *                       type: integer
+ *                     activeJobs:
+ *                       type: integer
+ *                     earnings:
+ *                       type: number
+ *                     averageRating:
+ *                       type: number
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ */
+router.get('/me/stats', authenticate, authorize(UserRole.PROVIDER), ProviderController.getStats);
+
+/**
+ * @swagger
  * /api/providers/{id}:
  *   get:
  *     summary: Get provider profile by ID
@@ -340,78 +413,6 @@ router.post(
   ProviderController.create
 );
 
-/**
- * @swagger
- * /api/providers/me/profile:
- *   get:
- *     summary: Get current user's provider profile (Provider only)
- *     tags: [Providers]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Provider profile details
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: "success"
- *                 data:
- *                   $ref: '#/components/schemas/Provider'
- *       401:
- *         $ref: '#/components/responses/Unauthorized'
- *       403:
- *         $ref: '#/components/responses/Forbidden'
- *       404:
- *         description: Provider profile not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.get('/me/profile', authenticate, authorize(UserRole.PROVIDER), ProviderController.getMyProfile);
-
-/**
- * @swagger
- * /api/providers/me/stats:
- *   get:
- *     summary: Get current user's provider statistics (Provider only)
- *     tags: [Providers]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Provider statistics
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: "success"
- *                 data:
- *                   type: object
- *                   properties:
- *                     jobsDone:
- *                       type: integer
- *                     pendingJobs:
- *                       type: integer
- *                     activeJobs:
- *                       type: integer
- *                     earnings:
- *                       type: number
- *                     averageRating:
- *                       type: number
- *       401:
- *         $ref: '#/components/responses/Unauthorized'
- *       403:
- *         $ref: '#/components/responses/Forbidden'
- */
-router.get('/me/stats', authenticate, authorize(UserRole.PROVIDER), ProviderController.getStats);
 
 /**
  * @swagger
