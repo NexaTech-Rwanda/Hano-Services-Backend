@@ -5,8 +5,8 @@ import rateLimit from 'express-rate-limit';
  * - Protects against brute-force login / OTP abuse
  */
 export const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // limit each IP to 20 auth requests per window
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 10, // limit each IP to 10 auth requests per window
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -21,7 +21,7 @@ export const authRateLimiter = rateLimit({
  */
 export const createResourceLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // limit each IP to 30 write requests per window
+  max: 20, // limit each IP to 20 write requests per window
   standardHeaders: true,
   legacyHeaders: false,
   message: {
