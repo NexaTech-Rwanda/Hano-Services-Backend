@@ -12,9 +12,9 @@ async function migrate() {
   try {
     console.log('Running database schema...\n');
 
-    const distSchemaPath = join(__dirname, 'schema.sql');
     const srcSchemaPath = resolve(process.cwd(), 'src', 'database', 'schema.sql');
-    const schemaPath = existsSync(distSchemaPath) ? distSchemaPath : srcSchemaPath;
+    const distSchemaPath = join(__dirname, 'schema.sql');
+    const schemaPath = existsSync(srcSchemaPath) ? srcSchemaPath : distSchemaPath;
 
     if (!existsSync(schemaPath)) {
       throw new Error(`Schema file not found at ${schemaPath}`);
