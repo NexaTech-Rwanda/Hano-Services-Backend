@@ -32,6 +32,7 @@ export class AuthController {
     ]),
     async (req: Request, res: Response) => {
       try {
+        // console.log("Registration request body:", req.body);
         const { username, phone, role, email, password } = req.body;
 
         const result = await AuthService.register(
@@ -42,10 +43,7 @@ export class AuthController {
           password
         );
 
-        // Immediately trigger OTP generation and sending upon successful registration
         await AuthService.sendOTP(phone);
-
-        console.log("User registered successfully:", result);
 
         return res.status(201).json({
           status: 'success',
