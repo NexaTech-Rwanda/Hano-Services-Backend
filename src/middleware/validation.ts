@@ -13,8 +13,8 @@ export const validate = (validations: ValidationChain[]) => {
       return next();
     }
 
-    // console.log("Validation failed for request:", req.originalUrl);
-    // console.log("Errors:", JSON.stringify(errors.array(), null, 2));
+    console.log("Validation failed for request:", req.originalUrl);
+    console.log("Errors:", JSON.stringify(errors.array(), null, 2));
 
     res.status(400).json({
       status: 'error',

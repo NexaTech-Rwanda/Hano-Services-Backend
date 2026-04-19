@@ -163,13 +163,23 @@ export class UserController {
         const userId = req.userId!;
         const { preferredContactMethod } = req.body;
 
-        const updatedUser = await UserModel.updatePreferredContactMethod(userId, preferredContactMethod);
+        // preferred_contact_method lives on the `providers` table, not `users`
+        const provider = await ProviderModel.findByUserId(userId);
+        if (!provider) {
+          logError('Provider profile not found', 'UserController.updateContactMethod');
+          return res.status(404).json({
+            status: 'error',
+            message: 'Provider profile not found. Only providers can set a contact method.',
+          });
+        }
 
-        console.log(`Updated preferred contact method for user ID ${userId} to ${preferredContactMethod} successfully`);
+        const updatedProvider = await ProviderModel.update(provider.id, { preferredContactMethod });
+
+        console.log(`Updated preferred contact method for provider (user ID ${userId}) to ${preferredContactMethod} successfully`);
 
         return res.json({
           status: 'success',
-          data: updatedUser,
+          data: updatedProvider,
         });
       } catch (error: any) {
         logError(error.message, 'UserController.updateContactMethod');
@@ -214,7 +224,7 @@ export class UserController {
         path: `users/${fileName}`,
         contentType: imageFile.mimetype,
         file: imageFile.buffer,
-        bucket: 'avatars',
+        // Using default bucket from config
       });
 
       // Update user's photo URL based on role
