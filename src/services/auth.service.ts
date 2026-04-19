@@ -116,7 +116,7 @@ export class AuthService {
 
     // Generate and store OTP
     const code = await OTPModel.create(phone);
-    // console.log("code", code)
+    console.log("code", code)
 
     const message = `Your HanoServices verification code is: ${code}. It expires in ${config.otp.expiryMinutes} minutes.`;
 
