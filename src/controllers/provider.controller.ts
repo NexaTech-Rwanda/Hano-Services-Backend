@@ -7,6 +7,7 @@ import { AuthRequest } from '../middleware/auth';
 import { ProviderService } from '../services/provider.service';
 import { ProviderAvailability } from '../types';
 import { StorageService } from '../services/storage.service';
+import { ProviderModel } from '../models/Provider';
 import { logError } from '../utils/logger';
 
 export class ProviderController {
@@ -193,14 +194,25 @@ export class ProviderController {
   static getMyProfile = async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.userId!;
-      const provider = await ProviderService.getProfileByUserId(userId);
+      // Try to find the provider profile; if it doesn't exist yet, return null gracefully
+      const providerRow = await ProviderModel.findByUserId(userId);
+      if (!providerRow) {
+        return res.json({
+          status: 'success',
+          data: null,
+          message: 'No provider profile created yet',
+        });
+      }
+
+      // Get enriched profile with details (rating, reviews, portfolio count)
+      const provider = await ProviderModel.findByIdWithDetails(providerRow.id);
       res.json({
         status: 'success',
         data: provider,
       });
     } catch (error: any) {
       logError(error.message, 'ProviderController.getMyProfile');
-      res.status(404).json({
+      res.status(500).json({
         status: 'error',
         message: error.message,
       });
